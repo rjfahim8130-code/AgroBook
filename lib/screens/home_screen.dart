@@ -19,7 +19,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    userName = Hive.box('settingsBox').get('userName', defaultValue: 'খামারি');
+    _loadUserName();
+  }
+
+  void _loadUserName() {
+    setState(() {
+      userName = Hive.box('settingsBox').get('userName', defaultValue: 'খামারি');
+    });
   }
 
   @override
@@ -40,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // মিনিমালিস্ট ব্যালেন্স খাতা কার্ড
+            // ব্যালেন্স খাতা কার্ড
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -48,7 +54,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey.shade200),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,8 +76,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.between,
                     children: [
-                      Text("📥 মোট আয়: ৳${farmProvider.totalIncome.toStringAsFixed(0)}", style: const TextStyle(color: Colors.green, fontSize: 13, fontWeight: FontWeight.w500)),
-                      Text("📤 মোট ব্যয়: ৳${farmProvider.totalExpense.toStringAsFixed(0)}", style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w500)),
+                      Text(
+                        "📥 মোট আয়: ৳${farmProvider.totalIncome.toStringAsFixed(0)}",
+                        style: const TextStyle(color: Colors.green, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                      Text(
+                        "📤 মোট ব্যয়: ৳${farmProvider.totalExpense.toStringAsFixed(0)}",
+                        style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
                     ],
                   )
                 ],
@@ -74,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
             const Text("মূল পরিচালনা মেনু", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
             const SizedBox(height: 12),
-            
+
             // গ্রিড বাটনসমূহ
             Expanded(
               child: GridView.count(
@@ -82,17 +100,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
                 children: [
-                  _buildMenuCard(context, "নতুন এন্ট্রি", Icons.add_circle_outline_rounded, Colors.emerald.shade700, () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const UniversalEntryForm()));
+                  _buildMenuCard(context, "নতুন এন্ট্রি", Icons.add_circle_outline_rounded, Colors.teal.shade700, () async {
+                    await Navigator.push(context, MaterialPageRoute(builder: (context) => const UniversalEntryForm()));
                   }),
                   _buildMenuCard(context, "লেনদেন খাতা", Icons.receipt_long_rounded, Colors.blueGrey.shade700, () {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const TransactionListScreen()));
                   }),
                   _buildMenuCard(context, "রাউন্ড / ব্যাচ", Icons.layers_outlined, Colors.indigo.shade700, () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("পরবর্তী মডিউলে রাউন্ড ডাটাবেজ ইন্টিগ্রেট করা হচ্ছে।")));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("পরবর্তী মডিউলে রাউন্ড ডাটাবেজ ইন্টিগ্রেট করা হচ্ছে।")),
+                    );
                   }),
-                  _buildMenuCard(context, "ব্যাকআপ ও সেটিংস", Icons.tune_rounded, Colors.grey.shade700, () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+                  _buildMenuCard(context, "ব্যাকআপ ও সেটিংস", Icons.tune_rounded, Colors.grey.shade700, () async {
+                    await Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+                    _loadUserName(); // সেটিংস পরিবর্তন হয়ে আসলে নাম রিফ্রেশ হবে
                   }),
                 ],
               ),
