@@ -17,6 +17,11 @@ class FarmProvider extends ChangeNotifier {
 
   double get netBalance => totalIncome - totalExpense;
 
+  // ডাটা রিফ্রেশ বা UI আপডেট করার জন্য মেথড
+  void refreshData() {
+    notifyListeners();
+  }
+
   // রাউন্ড ভিত্তিক সামারি হিসাব
   Map<String, double> getRoundSummary(String roundId) {
     final roundTxs = _box.values.where((tx) => tx.roundId == roundId);
