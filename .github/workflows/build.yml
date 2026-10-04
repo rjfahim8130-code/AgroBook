@@ -30,8 +30,8 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Create Android Project Files if Missing
-        run: flutter create . --platforms=android
+      - name: Create Android Project Files
+        run: flutter create . --project-name=agrobook --platforms=android
 
       - name: Build Release APK
         run: flutter build apk --release
