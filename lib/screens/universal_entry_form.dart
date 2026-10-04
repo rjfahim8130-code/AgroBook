@@ -230,5 +230,35 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
               const SizedBox(height: 16),
 
               // চূড়ান্ত মোট টাকা
-              TextFormField(
+              TextFormField(controller: _taController,
+focusNode: _taFocus,
+keyboardType: TextInputType.number,
+style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isIncome ? Colors.green.shade700 : Colors.red.shade700),
+decoration: const InputDecoration(labelText: "সর্বমোট টাকা (Total Amount) *", border: OutlineInputBorder()),
+validator: (val) => (double.tryParse(val ?? '0') ?? 0) <= 0 ? 'টাকার সঠিক অংক দিন' : null,
+),
+const SizedBox(height: 16),
+// অপশনাল নোট
+TextFormField(controller: _noteController, maxLines: 2, decoration: const InputDecoration(labelText: "নোট / মন্তব্য (ঐচ্ছিক)", border: OutlineInputBorder())),
+const SizedBox(height: 24),
+// সেভ বাটন
+SizedBox(
+width: double.infinity,
+height: 48,
+child: ElevatedButton(
+style: ElevatedButton.styleFrom(
+backgroundColor: isIncome ? theme.colorScheme.primary : Colors.red.shade700,
+shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+),
+onPressed: _saveForm,
+child: const Text("✨ তথ্য সুরক্ষিত করুন", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+),
+)
+],
+),
+),
+),
+);
+}
+}
                 
