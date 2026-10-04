@@ -98,11 +98,11 @@ class TransactionListScreen extends StatelessWidget {
                             }
                           },
                           itemBuilder: (context) => [
-                            const DropdownMenuItem(
+                            const PopupMenuItem(
                               value: 'edit',
                               child: Text('✏️ এডিট'),
                             ),
-                            const DropdownMenuItem(
+                            const PopupMenuItem(
                               value: 'delete',
                               child: Text('❌ ডিলিট', style: TextStyle(color: Colors.red)),
                             ),
