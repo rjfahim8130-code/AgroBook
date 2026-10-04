@@ -7,15 +7,26 @@ class FarmProvider extends ChangeNotifier {
 
   List<TransactionModel> get allTransactions => _box.values.toList().reversed.toList();
 
-  double get totalIncome => _box.values.where((tx) => tx.type == 'income').fold(0.0, (sum, tx) => sum + tx.totalAmount);
-  double get totalExpense => _box.values.where((tx) => tx.type == 'expense').fold(0.0, (sum, tx) => sum + tx.totalAmount);
+  double get totalIncome => _box.values
+      .where((tx) => tx.type == 'income')
+      .fold(0.0, (sum, tx) => sum + tx.totalAmount);
+
+  double get totalExpense => _box.values
+      .where((tx) => tx.type == 'expense')
+      .fold(0.0, (sum, tx) => sum + tx.totalAmount);
+
   double get netBalance => totalIncome - totalExpense;
 
   // রাউন্ড ভিত্তিক সামারি হিসাব
   Map<String, double> getRoundSummary(String roundId) {
     final roundTxs = _box.values.where((tx) => tx.roundId == roundId);
-    double income = roundTxs.where((tx) => tx.type == 'income').fold(0.0, (sum, tx) => sum + tx.totalAmount);
-    double expense = roundTxs.where((tx) => tx.type == 'expense').fold(0.0, (sum, tx) => sum + tx.totalAmount);
+    double income = roundTxs
+        .where((tx) => tx.type == 'income')
+        .fold(0.0, (sum, tx) => sum + tx.totalAmount);
+    double expense = roundTxs
+        .where((tx) => tx.type == 'expense')
+        .fold(0.0, (sum, tx) => sum + tx.totalAmount);
+
     return {
       'income': income,
       'expense': expense,
@@ -30,7 +41,8 @@ class FarmProvider extends ChangeNotifier {
   }
 
   Future<void> updateTransaction(TransactionModel tx) async {
-    int index = _box.values.toList().indexWhere((element) => element.id == tx.id);
+    final values = _box.values.toList();
+    int index = values.indexWhere((element) => element.id == tx.id);
     if (index != -1) {
       await _box.putAt(index, tx);
       notifyListeners();
