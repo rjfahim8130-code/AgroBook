@@ -133,7 +133,7 @@ class TransactionListScreen extends StatelessWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700),
             onPressed: () async {
-              Navigator.pop(dialogContext); // ডায়ালগ আগেই বন্ধ হবে
+              Navigator.pop(dialogContext);
               await provider.deleteTransaction(tx);
             },
             child: const Text("ডিলিট করুন", style: TextStyle(color: Colors.white)),
