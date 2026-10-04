@@ -9,7 +9,7 @@ import 'screens/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
-  
+
   if (!Hive.isAdapterRegistered(0)) {
     Hive.registerAdapter(TransactionModelAdapter());
   }
@@ -38,8 +38,8 @@ class AgroBookApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E7D32), // হালকা গভীর প্রফেশনাল সবুজ
-          background: const Color(0xFFF5F5F5), // চোখের জন্য আরামদায়ক ধূসর-সাদা
+          seedColor: const Color(0xFF2E7D32), // প্রফেশনাল সবুজ
+          surface: const Color(0xFFF5F5F5), // আরামদায়ক ব্যাকগ্রাউন্ড
         ),
         useMaterial3: true,
       ),
