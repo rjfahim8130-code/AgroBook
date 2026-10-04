@@ -15,11 +15,18 @@ class UniversalEntryForm extends StatefulWidget {
 
 class _UniversalEntryFormState extends State<UniversalEntryForm> {
   final _formKey = GlobalKey<FormState>();
-  
+
   String selectedType = 'income'; // 'income' অথবা 'expense'
   String selectedRound = 'infinity'; // ডিফল্ট কন্টিনিউয়াস মোড
   String? selectedCategory;
-  final List<String> categories = ['মুরগি বিক্রি', 'ফিড কেনা', 'ওষুধ ও ভ্যাকসিন', 'বিদ্যুৎ বিল', 'লেবার খরচ', 'অন্যান্য'];
+  final List<String> categories = [
+    'মুরগি বিক্রি',
+    'ফিড কেনা',
+    'ওষুধ ও ভ্যাকসিন',
+    'বিদ্যুৎ বিল',
+    'লেবার খরচ',
+    'অন্যান্য'
+  ];
 
   // টেক্সট কন্ট্রোলার সমূহ
   final _qtyController = TextEditingController(text: '0');
@@ -41,8 +48,8 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
   @override
   void initState() {
     super.initState();
-    
-    // কোনো ঘর থেকে ফোকাস চলে গেলে যেন অটো-ক্যালকুলেশন রান হয়
+
+    // ফোকাস চেঞ্জ লিসেনার
     _qtyFocus.addListener(_onFocusChange);
     _wpuFocus.addListener(_onFocusChange);
     _twFocus.addListener(_onFocusChange);
@@ -53,7 +60,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
     if (widget.editTransaction != null) {
       final tx = widget.editTransaction!;
       selectedType = tx.type;
-      selectedCategory = tx.productName;
+      selectedCategory = categories.contains(tx.productName) ? tx.productName : null;
       selectedRound = tx.roundId;
       _qtyController.text = tx.quantity.toString();
       _wpuController.text = tx.weightPerUnit.toString();
@@ -66,8 +73,12 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
   }
 
   void _onFocusChange() {
-    if (!_qtyFocus.hasFocus && !_wpuFocus.hasFocus && !_twFocus.hasFocus && 
-        !_ppuFocus.hasFocus && !_ppwFocus.hasFocus && !_taFocus.hasFocus) {
+    if (!_qtyFocus.hasFocus &&
+        !_wpuFocus.hasFocus &&
+        !_twFocus.hasFocus &&
+        !_ppuFocus.hasFocus &&
+        !_ppwFocus.hasFocus &&
+        !_taFocus.hasFocus) {
       _runSmartCalculation();
     }
   }
@@ -88,6 +99,8 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
       pricePerWeight: ppw,
       totalAmount: ta,
     );
+
+    if (!mounted) return;
 
     setState(() {
       _qtyController.text = result['quantity'] == 0 ? '0' : result['quantity'].toString();
@@ -132,12 +145,30 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
 
   @override
   void dispose() {
+    // ফোকাস নোড লিসেনার রিমুভ ও ডিসপোজ
+    _qtyFocus.removeListener(_onFocusChange);
+    _wpuFocus.removeListener(_onFocusChange);
+    _twFocus.removeListener(_onFocusChange);
+    _ppuFocus.removeListener(_onFocusChange);
+    _ppwFocus.removeListener(_onFocusChange);
+    _taFocus.removeListener(_onFocusChange);
+
     _qtyFocus.dispose();
     _wpuFocus.dispose();
     _twFocus.dispose();
     _ppuFocus.dispose();
     _ppwFocus.dispose();
     _taFocus.dispose();
+
+    // টেক্সট কন্ট্রোলার ডিসপোজ
+    _qtyController.dispose();
+    _wpuController.dispose();
+    _twController.dispose();
+    _ppuController.dispose();
+    _ppwController.dispose();
+    _taController.dispose();
+    _noteController.dispose();
+
     super.dispose();
   }
 
@@ -150,6 +181,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
       appBar: AppBar(
         title: Text(widget.editTransaction != null ? "✏️ হিসাব পরিবর্তন" : "📝 নতুন হিসাব এন্ট্রি"),
         backgroundColor: Colors.white,
+        elevation: 1,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -163,7 +195,9 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                 children: [
                   Expanded(
                     child: ChoiceChip(
-                      label: const Center(child: Text("📥 আয় / বিক্রি", style: TextStyle(fontWeight: FontWeight.bold))),
+                      label: const Center(
+                        child: Text("📥 আয় / বিক্রি", style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
                       selected: isIncome,
                       selectedColor: Colors.green.shade100,
                       onSelected: (val) => setState(() => selectedType = 'income'),
@@ -172,7 +206,9 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ChoiceChip(
-                      label: const Center(child: Text("📤 ব্যয় / কেনা", style: TextStyle(fontWeight: FontWeight.bold))),
+                      label: const Center(
+                        child: Text("📤 ব্যয় / কেনা", style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
                       selected: !isIncome,
                       selectedColor: Colors.red.shade100,
                       onSelected: (val) => setState(() => selectedType = 'expense'),
@@ -185,20 +221,28 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
               // হিসাবের মোড / রাউন্ড
               DropdownButtonFormField<String>(
                 value: selectedRound,
-                decoration: const InputDecoration(labelText: "হিসাবের মোড / রাউন্ড", border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: "হিসাবের মোড / রাউন্ড",
+                  border: OutlineInputBorder(),
+                ),
                 items: const [
                   DropdownMenuItem(value: 'infinity', child: Text('∞ কন্টিনিউয়াস মোড (চলমান হিসাব)')),
                   DropdownMenuItem(value: 'round_01', child: Text('শেড #১ (Round 01)')),
                   DropdownMenuItem(value: 'round_02', child: Text('শেড #২ (Round 02)')),
                 ],
-                onChanged: (val) => setState(() => selectedRound = val!),
+                onChanged: (val) {
+                  if (val != null) setState(() => selectedRound = val);
+                },
               ),
               const SizedBox(height: 16),
 
               // ক্যাটাগরি ড্রপডাউন
               DropdownButtonFormField<String>(
                 value: selectedCategory,
-                decoration: const InputDecoration(labelText: "ক্যাটাগরি সিলেক্ট করুন *", border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: "ক্যাটাগরি সিলেক্ট করুন *",
+                  border: OutlineInputBorder(),
+                ),
                 items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (val) => setState(() => selectedCategory = val),
                 validator: (val) => val == null ? 'ক্যাটাগরি দেওয়া বাধ্যতামূলক' : null,
@@ -208,57 +252,124 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
               // স্মার্ট ইনপুট গ্রিড (সংখ্যা ও একক ওজন)
               Row(
                 children: [
-                  Expanded(child: TextFormField(controller: _qtyController, focusNode: _qtyFocus, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "পরিমাণ (পিস/বস্তা)", border: OutlineInputBorder()))),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _qtyController,
+                      focusNode: _qtyFocus,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "পরিমাণ (পিস/বস্তা)",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 12),
-                  Expanded(child: TextFormField(controller: _wpuController, focusNode: _wpuFocus, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "একক ওজন (কেজি)", border: OutlineInputBorder()))),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _wpuController,
+                      focusNode: _wpuFocus,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "একক ওজন (কেজি)",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
 
               // মোট ওজন
-              TextFormField(controller: _twController, focusNode: _twFocus, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "মোট ওজন (কেজি) [ইঞ্জিন অটো ফিল করবে]", border: OutlineInputBorder())),
+              TextFormField(
+                controller: _twController,
+                focusNode: _twFocus,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: "মোট ওজন (কেজি) [ইঞ্জিন অটো ফিল করবে]",
+                  border: OutlineInputBorder(),
+                ),
+              ),
               const SizedBox(height: 16),
 
               // রেট গ্রিড (পার পিস ও পার কেজি)
               Row(
                 children: [
-                  Expanded(child: TextFormField(controller: _ppuController, focusNode: _ppuFocus, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "দাম (প্রতি পিস)", border: OutlineInputBorder()))),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _ppuController,
+                      focusNode: _ppuFocus,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "দাম (প্রতি পিস)",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 12),
-                  Expanded(child: TextFormField(controller: _ppwController, focusNode: _ppwFocus, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "দাম (প্রতি কেজি)", border: OutlineInputBorder()))),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _ppwController,
+                      focusNode: _ppwFocus,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "দাম (প্রতি কেজি)",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
 
               // চূড়ান্ত মোট টাকা
-              TextFormField(controller: _taController,
-focusNode: _taFocus,
-keyboardType: TextInputType.number,
-style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isIncome ? Colors.green.shade700 : Colors.red.shade700),
-decoration: const InputDecoration(labelText: "সর্বমোট টাকা (Total Amount) *", border: OutlineInputBorder()),
-validator: (val) => (double.tryParse(val ?? '0') ?? 0) <= 0 ? 'টাকার সঠিক অংক দিন' : null,
-),
-const SizedBox(height: 16),
-// অপশনাল নোট
-TextFormField(controller: _noteController, maxLines: 2, decoration: const InputDecoration(labelText: "নোট / মন্তব্য (ঐচ্ছিক)", border: OutlineInputBorder())),
-const SizedBox(height: 24),
-// সেভ বাটন
-SizedBox(
-width: double.infinity,
-height: 48,
-child: ElevatedButton(
-style: ElevatedButton.styleFrom(
-backgroundColor: isIncome ? theme.colorScheme.primary : Colors.red.shade700,
-shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-),
-onPressed: _saveForm,
-child: const Text("✨ তথ্য সুরক্ষিত করুন", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-),
-)
-],
-),
-),
-),
-);
+              TextFormField(
+                controller: _taController,
+                focusNode: _taFocus,
+                keyboardType: TextInputType.number,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: isIncome ? Colors.green.shade700 : Colors.red.shade700,
+                ),
+                decoration: const InputDecoration(
+                  labelText: "সর্বমোট টাকা (Total Amount) *",
+                  border: OutlineInputBorder(),
+                ),
+                validator: (val) => (double.tryParse(val ?? '0') ?? 0) <= 0 ? 'টাকার সঠিক অংক দিন' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // অপশনাল নোট
+              TextFormField(
+                controller: _noteController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: "নোট / মন্তব্য (ঐচ্ছিক)",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // সেভ বাটন
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isIncome ? theme.colorScheme.primary : Colors.red.shade700,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: _saveForm,
+                  child: const Text(
+                    "✨ তথ্য সুরক্ষিত করুন",
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
-}
-                
