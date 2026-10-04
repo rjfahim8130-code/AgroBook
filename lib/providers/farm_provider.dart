@@ -5,6 +5,14 @@ import '../models/transaction_model.dart';
 class FarmProvider extends ChangeNotifier {
   final Box<TransactionModel> _box = Hive.box<TransactionModel>('transactionsBox');
 
+  String _userName = "কৃষক ভাই";
+  String get userName => _userName;
+
+  void setUserName(String name) {
+    _userName = name;
+    notifyListeners();
+  }
+
   String _activeRoundId = 'infinity';
   String get activeRoundId => _activeRoundId;
 
