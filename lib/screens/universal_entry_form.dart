@@ -6,8 +6,13 @@ import '../utils/calculator_engine.dart';
 
 class UniversalEntryForm extends StatefulWidget {
   final TransactionModel? editTransaction; // এডিট মোডের জন্য অপশনাল
+  final String? initialType; // 'income' বা 'expense' প্রাথমিক মোড সেট করতে
 
-  const UniversalEntryForm({super.key, this.editTransaction});
+  const UniversalEntryForm({
+    super.key,
+    this.editTransaction,
+    this.initialType,
+  });
 
   @override
   State<UniversalEntryForm> createState() => _UniversalEntryFormState();
@@ -48,6 +53,11 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
   @override
   void initState() {
     super.initState();
+
+    // প্রাথমিক টাইপ সিলেক্ট (যদি বাইরে থেকে পাস করা হয়)
+    if (widget.initialType != null) {
+      selectedType = widget.initialType!;
+    }
 
     // ফোকাস চেঞ্জ লিসেনার
     _qtyFocus.addListener(_onFocusChange);
