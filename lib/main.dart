@@ -3,26 +3,22 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'models/transaction_model.dart';
 import 'providers/farm_provider.dart';
-import 'screens/welcome_screen.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Hive ইনিশিয়ালাইজেশন
   await Hive.initFlutter();
+  
+  // Model Adapter রেজিস্টার
+  Hive.registerAdapter(TransactionModelAdapter());
 
-  if (!Hive.isAdapterRegistered(0)) {
-    Hive.registerAdapter(TransactionModelAdapter());
-  }
-
-  await Hive.openBox('settingsBox');
+  // Hive Box ওপেন করা
   await Hive.openBox<TransactionModel>('transactionsBox');
+  await Hive.openBox('settingsBox');
 
-  runApp(
-    ChangeNotifierProvider(
-      create: (context) => FarmProvider(),
-      child: const AgroBookApp(),
-    ),
-  );
+  runApp(const AgroBookApp());
 }
 
 class AgroBookApp extends StatelessWidget {
@@ -30,20 +26,20 @@ class AgroBookApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var box = Hive.box('settingsBox');
-    bool isFirstTime = box.get('isFirstTime', defaultValue: true);
-
-    return MaterialApp(
-      title: 'AgroBook',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E7D32), // প্রফেশনাল সবুজ
-          surface: const Color(0xFFF5F5F5), // আরামদায়ক ব্যাকগ্রাউন্ড
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => FarmProvider()),
+      ],
+      child: MaterialApp(
+        title: 'AgroBook',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D32)),
+          useMaterial3: true,
+          fontFamily: 'Roboto',
         ),
-        useMaterial3: true,
+        home: const HomeScreen(),
       ),
-      home: isFirstTime ? const WelcomeScreen() : const HomeScreen(),
     );
   }
 }
