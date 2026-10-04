@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:provider/provider.dart';
 import '../services/backup_service.dart';
+import '../providers/farm_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -29,9 +32,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (path != null) {
         _statusText = "✅ ব্যাকআপ সফল হয়েছে!\n\nফাইল পাথ:\n$path\n\nফোন পরিবর্তন করলে এই ফাইলটি নতুন ফোনে নিয়ে ইম্পোর্ট করলেই সব হিসাব ফিরে আসবে।";
       } else {
-        _statusText = "❌ দুঃখিত! স্টোরেজ পারমিশন বা অন্য কোনো সমস্যার কারণে ব্যাকআপ ফাইল তৈরি করা যায়নি।";
+        _statusText = "❌ দুঃখিত! ব্যাকআপ ফাইল তৈরি করা যায়নি।";
       }
     });
+  }
+
+  void _runImport() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+    );
+
+    if (result != null && result.files.single.path != null) {
+      String filePath = result.files.single.path!;
+      
+      if (!filePath.endsWith('.abk')) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("❌ ভুল ফাইল ফরম্যাট! অনুগ্রহ করে '.abk' ফাইল সিলেক্ট করুন।")),
+        );
+        return;
+      }
+
+      setState(() => _statusText = "ডাটা রিস্টোর হচ্ছে, অপেক্ষা করুন...");
+
+      bool success = await BackupService.restoreLocalBackup(filePath);
+
+      if (!mounted) return;
+
+      if (success) {
+        Provider.of<FarmProvider>(context, listen: false).refreshData();
+        setState(() {
+          _userName = Hive.box('settingsBox').get('userName', defaultValue: 'খামারি');
+          _statusText = "🎉 সফলভাবে ব্যাকআপ থেকে সমস্ত তথ্য রিস্টোর করা হয়েছে!";
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("✅ ডাটা রিস্টোর সফল হয়েছে!")),
+        );
+      } else {
+        setState(() => _statusText = "❌ ব্যাকআপ ফাইল পড়া যায়নি বা ফাইলটি ক্ষতিগ্রস্ত।");
+      }
+    }
   }
 
   void _editUserName() {
@@ -84,7 +124,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // নাম পরিবর্তনের কার্ড
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -149,13 +188,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 "ফাইল থেকে রিস্টোর করুন (Import)",
                 style: TextStyle(color: Color(0xFF2E7D32), fontSize: 15, fontWeight: FontWeight.bold),
               ),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("ফাইল রিস্টোর করতে ফাইল ম্যানেজার থেকে 'agrobook_backup.abk' ফাইলটি সিলেক্ট করুন।"),
-                  ),
-                );
-              },
+              onPressed: _runImport,
             ),
           ],
         ),
