@@ -18,6 +18,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     box.put('userName', finalName);
     box.put('isFirstTime', false);
 
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -25,10 +26,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 
   @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F5E9), // একদম হালকা সুদিং গ্রিন
+      backgroundColor: const Color(0xFFE8F5E9),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Center(
@@ -40,9 +47,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 const SizedBox(height: 12),
                 Text(
                   "AgroBook",
-                  style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: theme.colorScheme.primary, letterSpacing: 1),
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                    letterSpacing: 1,
+                  ),
                 ),
-                const Text("আপনার খামারের স্মার্ট ও সহজ ডিজিটাল খাতা", style: TextStyle(fontSize: 14, color: Colors.black54)),
+                const Text(
+                  "আপনার খামারের স্মার্ট ও সহজ ডিজিটাল খাতা",
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                ),
                 const SizedBox(height: 48),
                 TextField(
                   controller: _nameController,
@@ -64,7 +79,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () => _completeOnboarding(),
-                    child: const Text("হিসাব খাতা শুরু করুন", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      "হিসাব খাতা শুরু করুন",
+                      style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
