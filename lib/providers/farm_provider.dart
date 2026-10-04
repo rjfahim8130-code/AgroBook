@@ -5,6 +5,26 @@ import '../models/transaction_model.dart';
 class FarmProvider extends ChangeNotifier {
   final Box<TransactionModel> _box = Hive.box<TransactionModel>('transactionsBox');
 
+  String _activeRoundId = 'infinity';
+  String get activeRoundId => _activeRoundId;
+
+  List<String> get availableRounds {
+    final rounds = _box.values
+        .map((tx) => tx.roundId)
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    if (!rounds.contains('infinity')) {
+      rounds.insert(0, 'infinity');
+    }
+    return rounds;
+  }
+
+  void setActiveRound(String roundId) {
+    _activeRoundId = roundId;
+    notifyListeners();
+  }
+
   List<TransactionModel> get allTransactions => _box.values.toList().reversed.toList();
 
   double get totalIncome => _box.values
@@ -17,12 +37,10 @@ class FarmProvider extends ChangeNotifier {
 
   double get netBalance => totalIncome - totalExpense;
 
-  // ডাটা রিফ্রেশ বা UI আপডেট করার জন্য মেথড
   void refreshData() {
     notifyListeners();
   }
 
-  // রাউন্ড ভিত্তিক সামারি হিসাব
   Map<String, double> getRoundSummary(String roundId) {
     final roundTxs = _box.values.where((tx) => tx.roundId == roundId);
     double income = roundTxs
