@@ -1,0 +1,44 @@
+import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import '../models/transaction_model.dart';
+
+class FarmProvider extends ChangeNotifier {
+  final Box<TransactionModel> _box = Hive.box<TransactionModel>('transactionsBox');
+
+  List<TransactionModel> get allTransactions => _box.values.toList().reversed.toList();
+
+  double get totalIncome => _box.values.where((tx) => tx.type == 'income').fold(0.0, (sum, tx) => sum + tx.totalAmount);
+  double get totalExpense => _box.values.where((tx) => tx.type == 'expense').fold(0.0, (sum, tx) => sum + tx.totalAmount);
+  double get netBalance => totalIncome - totalExpense;
+
+  // রাউন্ড ভিত্তিক সামারি হিসাব
+  Map<String, double> getRoundSummary(String roundId) {
+    final roundTxs = _box.values.where((tx) => tx.roundId == roundId);
+    double income = roundTxs.where((tx) => tx.type == 'income').fold(0.0, (sum, tx) => sum + tx.totalAmount);
+    double expense = roundTxs.where((tx) => tx.type == 'expense').fold(0.0, (sum, tx) => sum + tx.totalAmount);
+    return {
+      'income': income,
+      'expense': expense,
+      'profit': income - expense,
+      'percentage': expense > 0 ? ((income - expense) / expense) * 100 : 0.0,
+    };
+  }
+
+  Future<void> addTransaction(TransactionModel tx) async {
+    await _box.add(tx);
+    notifyListeners();
+  }
+
+  Future<void> updateTransaction(TransactionModel tx) async {
+    int index = _box.values.toList().indexWhere((element) => element.id == tx.id);
+    if (index != -1) {
+      await _box.putAt(index, tx);
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteTransaction(TransactionModel tx) async {
+    await tx.delete();
+    notifyListeners();
+  }
+}
