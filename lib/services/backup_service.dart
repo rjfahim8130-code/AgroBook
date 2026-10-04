@@ -32,7 +32,7 @@ class BackupService {
       };
 
       String rawJson = jsonEncode(masterMap);
-      String encryptedString = base64Encode(utf8.encode(rawJson)); // ডাটা সিকিউরিটি এনকোডিং
+      String encryptedString = base64Encode(utf8.encode(rawJson));
 
       final directory = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
       final backupFile = File('${directory.path}/agrobook_backup.abk');
