@@ -26,6 +26,8 @@ class FarmTransactionListScreen extends StatelessWidget {
                 final tx = list[index];
                 final isIncome = tx.type == 'income';
                 final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(tx.date);
+                final amountPrefix = isIncome ? '+' : '-';
+                final amountColor = isIncome ? Colors.green.shade700 : Colors.red.shade700;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
@@ -54,20 +56,28 @@ class FarmTransactionListScreen extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(tx.productName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.black45)),
+                                Text(
+                                  tx.productName,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                Text(
+                                  dateStr,
+                                  style: const TextStyle(fontSize: 11, color: Colors.black45),
+                                ),
                               ],
                             ),
                           ),
                           Text(
-                            "\( {isIncome ? '+' : '-'}৳ \){tx.totalAmount.toStringAsFixed(1)}",
+                            "$amountPrefix ৳${tx.totalAmount.toStringAsFixed(1)}",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
-                              color: isIncome ? Colors.green.shade700 : Colors.red.shade700,
+                              color: amountColor,
                             ),
                           ),
+                          const SizedBox(width: 4),
                           PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert, size: 22),
                             onSelected: (val) async {
                               if (val == 'edit') {
                                 Navigator.push(
@@ -86,7 +96,10 @@ class FarmTransactionListScreen extends StatelessWidget {
                                     title: const Text("ডিলিট করবেন?"),
                                     content: const Text("এই এন্ট্রি মুছে ফেলতে চান?"),
                                     actions: [
-                                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("না")),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx, false),
+                                        child: const Text("না"),
+                                      ),
                                       ElevatedButton(
                                         style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                                         onPressed: () => Navigator.pop(ctx, true),
@@ -101,22 +114,40 @@ class FarmTransactionListScreen extends StatelessWidget {
                               }
                             },
                             itemBuilder: (_) => [
-                              const PopupMenuItem(value: 'edit', child: Text("✏️ এডিট")),
-                              const PopupMenuItem(value: 'delete', child: Text("❌ ডিলিট", style: TextStyle(color: Colors.red))),
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.edit, size: 20),
+                                    SizedBox(width: 8),
+                                    Text("এডিট করুন"),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete, size: 20, color: Colors.red),
+                                    SizedBox(width: 8),
+                                    Text("ডিলিট", style: TextStyle(color: Colors.red)),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                         ],
                       ),
                       const Divider(height: 16),
                       Wrap(
-                        spacing: 12,
+                        spacing: 8,
                         runSpacing: 6,
                         children: [
-                          if (tx.quantity > 0) _chip("পরিমাণ", "${tx.quantity.toStringAsFixed(0)}"),
-                          if (tx.weightPerUnit > 0) _chip("একক ওজন", "${tx.weightPerUnit} কেজি"),
-                          if (tx.totalWeight > 0) _chip("মোট ওজন", "${tx.totalWeight} কেজি"),
-                          if (tx.pricePerUnit > 0) _chip("দাম/পিস", "৳${tx.pricePerUnit}"),
-                          if (tx.pricePerWeight > 0) _chip("দাম/কেজি", "৳${tx.pricePerWeight}"),
+                          if (tx.quantity > 0) _chip("পরিমাণ", tx.quantity % 1 == 0 ? tx.quantity.toInt().toString() : tx.quantity.toStringAsFixed(1)),
+                          if (tx.weightPerUnit > 0) _chip("একক ওজন", "${tx.weightPerUnit % 1 == 0 ? tx.weightPerUnit.toInt() : tx.weightPerUnit} কেজি"),
+                          if (tx.totalWeight > 0) _chip("মোট ওজন", "${tx.totalWeight % 1 == 0 ? tx.totalWeight.toInt() : tx.totalWeight} কেজি"),
+                          if (tx.pricePerUnit > 0) _chip("দাম/পিস", "৳${tx.pricePerUnit % 1 == 0 ? tx.pricePerUnit.toInt() : tx.pricePerUnit}"),
+                          if (tx.pricePerWeight > 0) _chip("দাম/কেজি", "৳${tx.pricePerWeight % 1 == 0 ? tx.pricePerWeight.toInt() : tx.pricePerWeight}"),
                           _chip("রাউন্ড", tx.batchId == 'infinity' ? 'চলমান' : tx.batchId),
                         ],
                       ),
