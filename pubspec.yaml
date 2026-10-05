@@ -36,5 +36,17 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
+
+  # Assets নির্দেশ করা
   assets:
     - assets/logo.png
+    - assets/fonts/
+
+  # বাংলা ফন্ট সাপোর্ট
+  fonts:
+    - family: NotoSansBengali
+      fonts:
+        - asset: assets/fonts/NotoSansBengali-Regular.ttf
+        - asset: assets/fonts/NotoSansBengali-Bold.ttf
+          weight: 700
+          
