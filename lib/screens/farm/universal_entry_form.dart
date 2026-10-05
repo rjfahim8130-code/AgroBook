@@ -119,7 +119,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
     if (value > 0 && controller.text != formatted) {
       controller.text = formatted;
       controller.selection = TextSelection.fromPosition(
-        TextSelectionPosition(offset: controller.text.length),
+        TextPosition(offset: controller.text.length),
       );
     }
   }
