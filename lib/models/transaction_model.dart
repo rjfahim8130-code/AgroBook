@@ -24,12 +24,34 @@ class TransactionModel extends HiveObject {
     this.totalWeight = 0,
     this.pricePerUnit = 0,
     this.pricePerWeight = 0,
-    this.totalAmount = 0,
+    double totalAmount = 0,
     this.note = '',
     required this.date,
     this.editedAt,
     this.batchId = 'infinity',
-  });
+  }) : totalAmount = totalAmount > 0
+            ? totalAmount
+            : _calculateTotalAmount(
+                quantity: quantity,
+                pricePerUnit: pricePerUnit,
+                totalWeight: totalWeight,
+                pricePerWeight: pricePerWeight,
+              );
+
+  /// মোট টাকা স্বয়ংক্রিয় হিসাব করার লজিক
+  static double _calculateTotalAmount({
+    required double quantity,
+    required double pricePerUnit,
+    required double totalWeight,
+    required double pricePerWeight,
+  }) {
+    if (quantity > 0 && pricePerUnit > 0) {
+      return quantity * pricePerUnit;
+    } else if (totalWeight > 0 && pricePerWeight > 0) {
+      return totalWeight * pricePerWeight;
+    }
+    return 0.0;
+  }
 }
 
 class TransactionModelAdapter extends TypeAdapter<TransactionModel> {
