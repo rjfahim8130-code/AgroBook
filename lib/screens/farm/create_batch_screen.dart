@@ -28,13 +28,18 @@ class _CreateBatchScreenState extends State<CreateBatchScreen> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-
     final farm = Provider.of<FarmProvider>(context, listen: false);
+
+    // নাম খালি থাকলে অটো নাম তৈরি করব
+    String batchName = _nameController.text.trim();
+    if (batchName.isEmpty) {
+      final existingCount = farm.allBatches.length;
+      batchName = "ব্যাচ-${(existingCount + 1).toString().padLeft(2, '0')}";
+    }
 
     final batch = BatchModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: _nameController.text.trim(),
+      name: batchName,
       startDate: startDate,
       initialCapital: double.tryParse(_capitalController.text) ?? 0,
       previousProfit: double.tryParse(_prevProfitController.text) ?? 0,
@@ -45,7 +50,12 @@ class _CreateBatchScreenState extends State<CreateBatchScreen> {
     await farm.createBatch(batch);
     farm.setActiveMode(batch.id);
 
-    if (mounted) Navigator.pop(context);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("ব্যাচ তৈরি হয়েছে: $batchName")),
+      );
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -61,17 +71,21 @@ class _CreateBatchScreenState extends State<CreateBatchScreen> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                  labelText: "ব্যাচের নাম * (যেমন: মুরগি ব্যাচ-০৩)",
+                  labelText: "ব্যাচের নাম (খালি রাখলে অটো নাম্বার হবে)",
+                  hintText: "যেমন: মুরগি ব্যাচ-০৩",
                   border: OutlineInputBorder(),
                 ),
-                validator: (v) => v == null || v.trim().isEmpty ? 'নাম দিন' : null,
               ),
               const SizedBox(height: 16),
 
+              // তারিখ সিলেক্টর (সংশোধিত)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text("শুরুর তারিখ"),
-                subtitle: Text("\( {startDate.day}/ \){startDate.month}/${startDate.year}"),
+                subtitle: Text(
+                  "${startDate.day.toString().padLeft(2, '0')}/${startDate.month.toString().padLeft(2, '0')}/${startDate.year}",
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () async {
                   final picked = await showDatePicker(
@@ -80,7 +94,9 @@ class _CreateBatchScreenState extends State<CreateBatchScreen> {
                     firstDate: DateTime(2020),
                     lastDate: DateTime.now().add(const Duration(days: 30)),
                   );
-                  if (picked != null) setState(() => startDate = picked);
+                  if (picked != null) {
+                    setState(() => startDate = picked);
+                  }
                 },
               ),
               const SizedBox(height: 16),
