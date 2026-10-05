@@ -1,4 +1,4 @@
-Import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/transaction_model.dart';
@@ -44,20 +44,19 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
       final tx = widget.editTx!;
       selectedType = tx.type;
       _nameController.text = tx.productName;
-      _qtyController.text = tx.quantity > 0 ? tx.quantity.toString() : '';
-      _wpuController.text = tx.weightPerUnit > 0 ? tx.weightPerUnit.toString() : '';
-      _twController.text = tx.totalWeight > 0 ? tx.totalWeight.toString() : '';
-      _ppuController.text = tx.pricePerUnit > 0 ? tx.pricePerUnit.toString() : '';
-      _ppwController.text = tx.pricePerWeight > 0 ? tx.pricePerWeight.toString() : '';
-      _taController.text = tx.totalAmount > 0 ? tx.totalAmount.toString() : '';
+      _qtyController.text = _formatNumber(tx.quantity);
+      _wpuController.text = _formatNumber(tx.weightPerUnit);
+      _twController.text = _formatNumber(tx.totalWeight);
+      _ppuController.text = _formatNumber(tx.pricePerUnit);
+      _ppwController.text = _formatNumber(tx.pricePerWeight);
+      _taController.text = _formatNumber(tx.totalAmount);
       _noteController.text = tx.note;
     }
   }
 
-  // স্মার্ট টাইপিং ডিটেক্টর: টাইপিং থামলে ৫০০ মিলি সেকেন্ড পর লাইভ হিসাব হবে
   void _onInputChanged() {
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
       _calculateAll();
     });
   }
@@ -75,7 +74,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
     double ppw = double.tryParse(_ppwController.text) ?? 0;
     double ta = double.tryParse(_taController.text) ?? 0;
 
-    // ১. ওজন সংক্রান্ত হিসাব (পরিমাণ, একক ওজন, মোট ওজন)
+    // ১. ওজন ও পরিমাণের পারস্পরিক হিসাব
     if (qty > 0 && wpu > 0) {
       tw = qty * wpu;
     } else if (tw > 0 && wpu > 0 && qty == 0) {
@@ -84,14 +83,14 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
       wpu = tw / qty;
     }
 
-    // ২. মোট টাকা বের করার হিসাব
+    // ২. মোট টাকার হিসাব
     if (qty > 0 && ppu > 0) {
       ta = qty * ppu;
     } else if (tw > 0 && ppw > 0) {
       ta = tw * ppw;
     }
 
-    // ৩. মোট টাকা জানা থাকলে বাকি দর/পিস বা দর/কেজি বের করা
+    // ৩. রিভার্স ক্যালকুলেশন (মোট টাকা থেকে একক দাম)
     if (ta > 0) {
       if (qty > 0 && ppu == 0) ppu = ta / qty;
       if (tw > 0 && ppw == 0) ppw = ta / tw;
@@ -99,39 +98,35 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
       if (ppw > 0 && tw == 0) tw = ta / ppw;
     }
 
-    // পুনরায় ওজনের সম্পর্ক মেলানো
+    // ৪. চূড়ান্ত অ্যাডজাস্টমেন্ট
     if (qty > 0 && wpu > 0 && tw == 0) tw = qty * wpu;
     if (tw > 0 && qty > 0 && wpu == 0) wpu = tw / qty;
 
-    // UI ফোকাস নষ্ট না করে লাইভ মান আপডেট
     if (mounted) {
       setState(() {
-        if (tw > 0 && _twController.text != _formatNumber(tw)) {
-          _twController.text = _formatNumber(tw);
-        }
-        if (wpu > 0 && _wpuController.text != _formatNumber(wpu)) {
-          _wpuController.text = _formatNumber(wpu);
-        }
-        if (qty > 0 && _qtyController.text != _formatNumber(qty)) {
-          _qtyController.text = _formatNumber(qty);
-        }
-        if (ppu > 0 && _ppuController.text != _formatNumber(ppu)) {
-          _ppuController.text = _formatNumber(ppu);
-        }
-        if (ppw > 0 && _ppwController.text != _formatNumber(ppw)) {
-          _ppwController.text = _formatNumber(ppw);
-        }
-        if (ta > 0 && _taController.text != _formatNumber(ta)) {
-          _taController.text = _formatNumber(ta);
-        }
+        _updateControllerIfChanged(_twController, tw);
+        _updateControllerIfChanged(_wpuController, wpu);
+        _updateControllerIfChanged(_qtyController, qty);
+        _updateControllerIfChanged(_ppuController, ppu);
+        _updateControllerIfChanged(_ppwController, ppw);
+        _updateControllerIfChanged(_taController, ta);
       });
+    }
+  }
+
+  void _updateControllerIfChanged(TextEditingController controller, double value) {
+    String formatted = _formatNumber(value);
+    if (value > 0 && controller.text != formatted) {
+      controller.text = formatted;
+      controller.selection = TextSelection.fromPosition(
+        TextSelectionPosition(offset: controller.text.length),
+      );
     }
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // সেভ বাটন প্রেস করলে চূড়ান্ত হিসাব
     _calculateAll();
 
     final total = double.tryParse(_taController.text) ?? 0;
@@ -239,7 +234,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   Expanded(
                     child: TextFormField(
                       controller: _qtyController,
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: const InputDecoration(labelText: "পরিমাণ", border: OutlineInputBorder()),
                       onChanged: (_) => _onInputChanged(),
                     ),
@@ -248,7 +243,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   Expanded(
                     child: TextFormField(
                       controller: _wpuController,
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: const InputDecoration(labelText: "একক ওজন (কেজি)", border: OutlineInputBorder()),
                       onChanged: (_) => _onInputChanged(),
                     ),
@@ -259,7 +254,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
 
               TextFormField(
                 controller: _twController,
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
                   labelText: "মোট ওজন (কেজি)",
                   border: OutlineInputBorder(),
@@ -273,7 +268,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   Expanded(
                     child: TextFormField(
                       controller: _ppuController,
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: const InputDecoration(labelText: "দাম / পিস", border: OutlineInputBorder()),
                       onChanged: (_) => _onInputChanged(),
                     ),
@@ -282,7 +277,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   Expanded(
                     child: TextFormField(
                       controller: _ppwController,
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: const InputDecoration(labelText: "দাম / কেজি", border: OutlineInputBorder()),
                       onChanged: (_) => _onInputChanged(),
                     ),
@@ -293,7 +288,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
 
               TextFormField(
                 controller: _taController,
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
