@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/transaction_model.dart';
 import '../../providers/farm_provider.dart';
-import '../../utils/calculator_engine.dart';
 
 class UniversalEntryForm extends StatefulWidget {
   final String? initialType;
@@ -33,7 +32,12 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
   final _taController = TextEditingController();
   final _noteController = TextEditingController();
 
-  bool _isCalculating = false;
+  final _qtyFocus = FocusNode();
+  final _wpuFocus = FocusNode();
+  final _twFocus = FocusNode();
+  final _ppuFocus = FocusNode();
+  final _ppwFocus = FocusNode();
+  final _taFocus = FocusNode();
 
   @override
   void initState() {
@@ -44,63 +48,102 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
       final tx = widget.editTx!;
       selectedType = tx.type;
       _nameController.text = tx.productName;
-      _qtyController.text = tx.quantity > 0 ? tx.quantity.toString() : '';
-      _wpuController.text = tx.weightPerUnit > 0 ? tx.weightPerUnit.toString() : '';
-      _twController.text = tx.totalWeight > 0 ? tx.totalWeight.toString() : '';
-      _ppuController.text = tx.pricePerUnit > 0 ? tx.pricePerUnit.toString() : '';
-      _ppwController.text = tx.pricePerWeight > 0 ? tx.pricePerWeight.toString() : '';
-      _taController.text = tx.totalAmount > 0 ? tx.totalAmount.toString() : '';
+      _qtyController.text = tx.quantity > 0 ? _formatNumber(tx.quantity) : '';
+      _wpuController.text = tx.weightPerUnit > 0 ? _formatNumber(tx.weightPerUnit) : '';
+      _twController.text = tx.totalWeight > 0 ? _formatNumber(tx.totalWeight) : '';
+      _ppuController.text = tx.pricePerUnit > 0 ? _formatNumber(tx.pricePerUnit) : '';
+      _ppwController.text = tx.pricePerWeight > 0 ? _formatNumber(tx.pricePerWeight) : '';
+      _taController.text = tx.totalAmount > 0 ? _formatNumber(tx.totalAmount) : '';
       _noteController.text = tx.note;
+    }
+
+    // একটি ফিল্ড থেকে অন্য ফিল্ডে ফোকাস সরলে রিক্যালকুলেশন হবে
+    _qtyFocus.addListener(_handleFocusChange);
+    _wpuFocus.addListener(_handleFocusChange);
+    _twFocus.addListener(_handleFocusChange);
+    _ppuFocus.addListener(_handleFocusChange);
+    _ppwFocus.addListener(_handleFocusChange);
+    _taFocus.addListener(_handleFocusChange);
+  }
+
+  void _handleFocusChange() {
+    // কোনো ফিল্ড থেকে ফোকাস চলে গেলে রিক্যালকুলেশন
+    if (!_qtyFocus.hasFocus &&
+        !_wpuFocus.hasFocus &&
+        !_twFocus.hasFocus &&
+        !_ppuFocus.hasFocus &&
+        !_ppwFocus.hasFocus &&
+        !_taFocus.hasFocus) {
+      _calculateAll();
     }
   }
 
-  void _runCalculation() {
-    if (_isCalculating) return;
-    _isCalculating = true;
+  String _formatNumber(double val) {
+    if (val <= 0) return '';
+    return val % 1 == 0 ? val.toInt().toString() : val.toStringAsFixed(2);
+  }
 
-    final result = CalculatorEngine.calculateMissingValues(
-      quantity: double.tryParse(_qtyController.text) ?? 0,
-      weightPerUnit: double.tryParse(_wpuController.text) ?? 0,
-      totalWeight: double.tryParse(_twController.text) ?? 0,
-      pricePerUnit: double.tryParse(_ppuController.text) ?? 0,
-      pricePerWeight: double.tryParse(_ppwController.text) ?? 0,
-      totalAmount: double.tryParse(_taController.text) ?? 0,
-    );
+  void _calculateAll() {
+    double qty = double.tryParse(_qtyController.text) ?? 0;
+    double wpu = double.tryParse(_wpuController.text) ?? 0;
+    double tw = double.tryParse(_twController.text) ?? 0;
+    double ppu = double.tryParse(_ppuController.text) ?? 0;
+    double ppw = double.tryParse(_ppwController.text) ?? 0;
+    double ta = double.tryParse(_taController.text) ?? 0;
 
-    void updateIfNeeded(TextEditingController controller, double newValue) {
-      final current = double.tryParse(controller.text) ?? 0;
-      if (current <= 0 && newValue > 0) {
-        controller.text = newValue.toStringAsFixed(
-          newValue.truncateToDouble() == newValue ? 0 : 2,
-        );
+    // ১. ওজন সংক্রান্ত হিসাব (পরিমাণ, একক ওজন, মোট ওজন)
+    if (qty > 0 && wpu > 0) {
+      tw = qty * wpu;
+    } else if (tw > 0 && wpu > 0 && qty == 0) {
+      qty = tw / wpu;
+    } else if (tw > 0 && qty > 0 && wpu == 0) {
+      wpu = tw / qty;
+    }
+
+    // ২. মোট টাকা বের করার হিসাব
+    if (ta == 0) {
+      if (qty > 0 && ppu > 0) {
+        ta = qty * ppu;
+      } else if (tw > 0 && ppw > 0) {
+        ta = tw * ppw;
       }
     }
 
-    setState(() {
-      updateIfNeeded(_qtyController, result['quantity']!);
-      updateIfNeeded(_wpuController, result['weightPerUnit']!);
-      updateIfNeeded(_twController, result['totalWeight']!);
-      updateIfNeeded(_ppuController, result['pricePerUnit']!);
-      updateIfNeeded(_ppwController, result['pricePerWeight']!);
-      updateIfNeeded(_taController, result['totalAmount']!);
-    });
+    // ৩. মোট টাকা দেওয়া থাকলে অন্যান্য মান বের করা
+    if (ta > 0) {
+      if (qty > 0 && ppu == 0) ppu = ta / qty;
+      if (tw > 0 && ppw == 0) ppw = ta / tw;
+      if (ppu > 0 && qty == 0) qty = ta / ppu;
+      if (ppw > 0 && tw == 0) tw = ta / ppw;
+    }
 
-    _isCalculating = false;
+    // ওজনের দ্বিমুখী সম্পর্ক পুনঃনির্ধারণ
+    if (qty > 0 && wpu > 0 && tw == 0) tw = qty * wpu;
+    if (tw > 0 && qty > 0 && wpu == 0) wpu = tw / qty;
+
+    // যে ফিল্ডগুলো ক্লিয়ার/খালি সেগুলোতে সঠিক ডাটা বসানো
+    setState(() {
+      _qtyController.text = _formatNumber(qty);
+      _wpuController.text = _formatNumber(wpu);
+      _twController.text = _formatNumber(tw);
+      _ppuController.text = _formatNumber(ppu);
+      _ppwController.text = _formatNumber(ppw);
+      _taController.text = _formatNumber(ta);
+    });
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // সেভ করার মুহূর্তে চূড়ান্ত হিসাব সম্পন্ন করা
-    _runCalculation();
+    // সেভ বাটন প্রেস করা মাত্র চূড়ান্ত হিসাব নিশ্চিত করা
+    _calculateAll();
 
     final total = double.tryParse(_taController.text) ?? 0;
-    
-    // পর্যাপ্ত তথ্য না দিলে যদি মোট টাকা বের না হয়, তখন নোটিশ দেওয়া হবে
+
     if (total <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("মোট টাকা পাওয়া যায়নি। অনুগ্রহ করে সঠিক পরিমাণ ও দামের তথ্য দিন।"),
+          content: Text("পর্যাপ্ত তথ্য পাওয়া যায়নি! মোট টাকা বা দাম/পরিমাণের তথ্য সঠিকভাবে দিন।"),
           backgroundColor: Colors.red,
         ),
       );
@@ -136,6 +179,13 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
 
   @override
   void dispose() {
+    _qtyFocus.dispose();
+    _wpuFocus.dispose();
+    _twFocus.dispose();
+    _ppuFocus.dispose();
+    _ppwFocus.dispose();
+    _taFocus.dispose();
+
     _nameController.dispose();
     _qtyController.dispose();
     _wpuController.dispose();
@@ -161,7 +211,6 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
           key: _formKey,
           child: Column(
             children: [
-              // আয় / ব্যয় সিলেক্ট
               Row(
                 children: [
                   Expanded(
@@ -200,18 +249,18 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   Expanded(
                     child: TextFormField(
                       controller: _qtyController,
+                      focusNode: _qtyFocus,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "পরিমাণ", border: OutlineInputBorder()),
-                      onChanged: (_) => _runCalculation(),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
                       controller: _wpuController,
+                      focusNode: _wpuFocus,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "একক ওজন (কেজি)", border: OutlineInputBorder()),
-                      onChanged: (_) => _runCalculation(),
                     ),
                   ),
                 ],
@@ -220,12 +269,12 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
 
               TextFormField(
                 controller: _twController,
+                focusNode: _twFocus,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: "মোট ওজন (কেজি) - অটো হিসাব হবে",
+                  labelText: "মোট ওজন (কেজি)",
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (_) => _runCalculation(),
               ),
               const SizedBox(height: 16),
 
@@ -234,18 +283,18 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   Expanded(
                     child: TextFormField(
                       controller: _ppuController,
+                      focusNode: _ppuFocus,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "দাম / পিস", border: OutlineInputBorder()),
-                      onChanged: (_) => _runCalculation(),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
                       controller: _ppwController,
+                      focusNode: _ppwFocus,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "দাম / কেজি", border: OutlineInputBorder()),
-                      onChanged: (_) => _runCalculation(),
                     ),
                   ),
                 ],
@@ -254,6 +303,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
 
               TextFormField(
                 controller: _taController,
+                focusNode: _taFocus,
                 keyboardType: TextInputType.number,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
@@ -261,11 +311,10 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   color: isIncome ? Colors.green.shade700 : Colors.red.shade700,
                 ),
                 decoration: const InputDecoration(
-                  labelText: "মোট টাকা (অটো হিসাব হবে)",
+                  labelText: "মোট টাকা",
                   border: OutlineInputBorder(),
                   prefixText: "৳ ",
                 ),
-                onChanged: (_) => _runCalculation(),
               ),
               const SizedBox(height: 16),
 
