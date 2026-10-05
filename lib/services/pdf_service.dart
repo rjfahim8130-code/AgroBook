@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
@@ -15,6 +16,13 @@ class PdfService {
     required List<TransactionModel> transactions,
     BatchModel? batch,
   }) async {
+    // Local Assets থেকে বাংলা ফন্ট লোড করা
+    final fontData = await rootBundle.load('assets/fonts/NotoSansBengali-Regular.ttf');
+    final fontBoldData = await rootBundle.load('assets/fonts/NotoSansBengali-Bold.ttf');
+
+    final font = pw.Font.ttf(fontData);
+    final fontBold = pw.Font.ttf(fontBoldData);
+
     final pdf = pw.Document();
 
     final incomeList = transactions.where((tx) => tx.type == 'income').toList();
@@ -26,7 +34,10 @@ class PdfService {
 
     pdf.addPage(
       pw.MultiPage(
-        // কলাম বেশি থাকায় পেজ Landscape ফরম্যাটে দিলে টেবিল সুন্দরভাবে ফিট করবে
+        theme: pw.ThemeData.withFont(
+          base: font,
+          bold: fontBold,
+        ),
         pageFormat: PdfPageFormat.a4.landscape,
         margin: const pw.EdgeInsets.all(20),
         build: (context) => [
@@ -139,7 +150,6 @@ class PdfService {
       ),
     );
 
-    // প্রিভিউ + জুম + শেয়ার সাপোর্ট
     await Printing.layoutPdf(
       onLayout: (format) async => pdf.save(),
       name: title,
@@ -165,7 +175,6 @@ class PdfService {
         8: pw.FlexColumnWidth(1.5), // নোট
       },
       children: [
-        // হেডার
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.grey200),
           children: [
@@ -180,7 +189,6 @@ class PdfService {
             _cell("নোট", bold: true),
           ],
         ),
-        // ডাটা
         ...list.map((tx) {
           String dateText = "${_dateFormat.format(tx.date)}\n${_timeFormat.format(tx.date)}";
           if (tx.editedAt != null) {
@@ -218,10 +226,9 @@ class PdfService {
     );
   }
 
-  /// দৈনিক / সাপ্তাহিক / মাসিক / বাৎসরিক ফিল্টার
   static List<TransactionModel> filterByPeriod(
     List<TransactionModel> all,
-    String period, // 'daily', 'weekly', 'monthly', 'yearly'
+    String period,
   ) {
     final now = DateTime.now();
     return all.where((tx) {
