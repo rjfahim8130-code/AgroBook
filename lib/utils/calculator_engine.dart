@@ -1,5 +1,4 @@
 class CalculatorEngine {
-  /// ইউজার যে তথ্য দিয়েছে তার ভিত্তিতে সম্ভব হলে বাকি ঘরগুলো পূরণ করে
   static Map<String, double> calculateMissingValues({
     required double quantity,
     required double weightPerUnit,
@@ -15,43 +14,50 @@ class CalculatorEngine {
     double ppw = pricePerWeight;
     double ta = totalAmount;
 
-    // ----- ওজন হিসাব -----
-    if (q > 0 && wpu > 0) {
-      tw = q * wpu;
-    } else if (tw > 0 && q > 0 && wpu == 0) {
-      wpu = tw / q;
-    } else if (tw > 0 && wpu > 0 && q == 0) {
-      q = tw / wpu;
-    }
+    // ২ বার লুপ চালানো হচ্ছে যেন ১টি মান বের হওয়ার পর পরবর্তী নির্ভরশীল মানগুলোও অটোমেটিক হিসাব হয়ে যায়
+    for (int i = 0; i < 2; i++) {
+      // ১. ওজন হিসাব
+      if (q > 0 && wpu > 0 && tw <= 0) {
+        tw = q * wpu;
+      } else if (tw > 0 && q > 0 && wpu <= 0) {
+        wpu = tw / q;
+      } else if (tw > 0 && wpu > 0 && q <= 0) {
+        q = tw / wpu;
+      }
 
-    // ----- মোট টাকা হিসাব -----
-    if (q > 0 && ppu > 0) {
-      ta = q * ppu;
-    } else if (tw > 0 && ppw > 0) {
-      ta = tw * ppw;
-    }
+      // ২. মোট টাকা হিসাব
+      if (ta <= 0) {
+        if (q > 0 && ppu > 0) {
+          ta = q * ppu;
+        } else if (tw > 0 && ppw > 0) {
+          ta = tw * ppw;
+        }
+      }
 
-    // ----- রিভার্স রেট -----
-    if (ta > 0 && q > 0 && ppu == 0) {
-      ppu = ta / q;
-    }
-    if (ta > 0 && tw > 0 && ppw == 0) {
-      ppw = ta / tw;
-    }
+      // ৩. রিভার্স রেট (মোট টাকা থেকে)
+      if (ta > 0) {
+        if (q > 0 && ppu <= 0) {
+          ppu = ta / q;
+        }
+        if (tw > 0 && ppw <= 0) {
+          ppw = ta / tw;
+        }
+        if (ppu > 0 && q <= 0) {
+          q = ta / ppu;
+        }
+        if (ppw > 0 && tw <= 0) {
+          tw = ta / ppw;
+        }
+      }
 
-    // ----- একক দাম ↔ ওজন দাম সম্পর্ক -----
-    if (ppu > 0 && wpu > 0 && ppw == 0) {
-      ppw = ppu / wpu;
-    }
-    if (ppw > 0 && wpu > 0 && ppu == 0) {
-      ppu = ppw * wpu;
-    }
-
-    // চূড়ান্ত মোট টাকা নিশ্চিতকরণ
-    if (q > 0 && ppu > 0) {
-      ta = q * ppu;
-    } else if (tw > 0 && ppw > 0) {
-      ta = tw * ppw;
+      // ৪. একক দাম ↔ ওজন দাম সম্পর্ক
+      if (wpu > 0) {
+        if (ppu > 0 && ppw <= 0) {
+          ppw = ppu / wpu;
+        } else if (ppw > 0 && ppu <= 0) {
+          ppu = ppw * wpu;
+        }
+      }
     }
 
     return {
