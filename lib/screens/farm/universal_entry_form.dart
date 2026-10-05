@@ -57,7 +57,6 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
       _noteController.text = tx.note;
     }
 
-    // একটি ফিল্ড থেকে অন্য ফিল্ডে ফোকাস সরলে রিক্যালকুলেশন হবে
     _qtyFocus.addListener(_handleFocusChange);
     _wpuFocus.addListener(_handleFocusChange);
     _twFocus.addListener(_handleFocusChange);
@@ -67,7 +66,6 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
   }
 
   void _handleFocusChange() {
-    // কোনো ফিল্ড থেকে ফোকাস চলে গেলে রিক্যালকুলেশন
     if (!_qtyFocus.hasFocus &&
         !_wpuFocus.hasFocus &&
         !_twFocus.hasFocus &&
@@ -91,37 +89,28 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
     double ppw = double.tryParse(_ppwController.text) ?? 0;
     double ta = double.tryParse(_taController.text) ?? 0;
 
-    // ১. ওজন সংক্রান্ত হিসাব (পরিমাণ, একক ওজন, মোট ওজন)
+    // ১. মোট ওজন ক্যালকুলেশন (পরিমাণ ও একক ওজন থাকলে)
     if (qty > 0 && wpu > 0) {
       tw = qty * wpu;
-    } else if (tw > 0 && wpu > 0 && qty == 0) {
-      qty = tw / wpu;
     } else if (tw > 0 && qty > 0 && wpu == 0) {
       wpu = tw / qty;
+    } else if (tw > 0 && wpu > 0 && qty == 0) {
+      qty = tw / wpu;
     }
 
-    // ২. মোট টাকা বের করার হিসাব
-    if (ta == 0) {
-      if (qty > 0 && ppu > 0) {
-        ta = qty * ppu;
-      } else if (tw > 0 && ppw > 0) {
-        ta = tw * ppw;
-      }
+    // ২. মোট টাকা ক্যালকুলেশন (পিস বা ওজনের দাম থাকলে)
+    if (qty > 0 && ppu > 0) {
+      ta = qty * ppu;
+    } else if (tw > 0 && ppw > 0) {
+      ta = tw * ppw;
     }
 
-    // ৩. মোট টাকা দেওয়া থাকলে অন্যান্য মান বের করা
+    // ৩. রিভার্স ক্যালকুলেশন (যদি মোট টাকা ম্যানুয়ালি ইনপুট দেওয়া থাকে)
     if (ta > 0) {
       if (qty > 0 && ppu == 0) ppu = ta / qty;
       if (tw > 0 && ppw == 0) ppw = ta / tw;
-      if (ppu > 0 && qty == 0) qty = ta / ppu;
-      if (ppw > 0 && tw == 0) tw = ta / ppw;
     }
 
-    // ওজনের দ্বিমুখী সম্পর্ক পুনঃনির্ধারণ
-    if (qty > 0 && wpu > 0 && tw == 0) tw = qty * wpu;
-    if (tw > 0 && qty > 0 && wpu == 0) wpu = tw / qty;
-
-    // যে ফিল্ডগুলো ক্লিয়ার/খালি সেগুলোতে সঠিক ডাটা বসানো
     setState(() {
       _qtyController.text = _formatNumber(qty);
       _wpuController.text = _formatNumber(wpu);
@@ -135,7 +124,6 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // সেভ বাটন প্রেস করা মাত্র চূড়ান্ত হিসাব নিশ্চিত করা
     _calculateAll();
 
     final total = double.tryParse(_taController.text) ?? 0;
@@ -252,6 +240,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                       focusNode: _qtyFocus,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "পরিমাণ", border: OutlineInputBorder()),
+                      onChanged: (_) => _calculateAll(),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -261,6 +250,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                       focusNode: _wpuFocus,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "একক ওজন (কেজি)", border: OutlineInputBorder()),
+                      onChanged: (_) => _calculateAll(),
                     ),
                   ),
                 ],
@@ -275,6 +265,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   labelText: "মোট ওজন (কেজি)",
                   border: OutlineInputBorder(),
                 ),
+                onChanged: (_) => _calculateAll(),
               ),
               const SizedBox(height: 16),
 
@@ -286,6 +277,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                       focusNode: _ppuFocus,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "দাম / পিস", border: OutlineInputBorder()),
+                      onChanged: (_) => _calculateAll(),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -295,6 +287,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                       focusNode: _ppwFocus,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "দাম / কেজি", border: OutlineInputBorder()),
+                      onChanged: (_) => _calculateAll(),
                     ),
                   ),
                 ],
@@ -337,9 +330,9 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: _save,
-                  child: const Text(
-                    "সেভ করুন",
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  child: Text(
+                    widget.editTx != null ? "আপডেট করুন" : "সেভ করুন",
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
