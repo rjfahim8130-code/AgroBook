@@ -91,7 +91,12 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // সেভ করার ঠিক আগে হিসাব রান করা
     _runCalculation();
+
+    // হিসাব সম্পন্ন হওয়ার পর স্টেট আপডেটের জন্য সাময়িক বিরতি
+    await Future.delayed(const Duration(milliseconds: 50));
 
     final total = double.tryParse(_taController.text) ?? 0;
     if (total <= 0) {
@@ -196,7 +201,6 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                       controller: _qtyController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "পরিমাণ", border: OutlineInputBorder()),
-                      onChanged: (_) => _runCalculation(),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -205,7 +209,6 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                       controller: _wpuController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "একক ওজন (কেজি)", border: OutlineInputBorder()),
-                      onChanged: (_) => _runCalculation(),
                     ),
                   ),
                 ],
@@ -216,10 +219,9 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                 controller: _twController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: "মোট ওজন (কেজি) - অটো ফিল হবে",
+                  labelText: "মোট ওজন (কেজি) - সেভ করলে অটো ফিল হবে",
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (_) => _runCalculation(),
               ),
               const SizedBox(height: 16),
 
@@ -230,7 +232,6 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                       controller: _ppuController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "দাম / পিস", border: OutlineInputBorder()),
-                      onChanged: (_) => _runCalculation(),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -239,7 +240,6 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                       controller: _ppwController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "দাম / কেজি", border: OutlineInputBorder()),
-                      onChanged: (_) => _runCalculation(),
                     ),
                   ),
                 ],
@@ -259,7 +259,6 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   border: OutlineInputBorder(),
                   prefixText: "৳ ",
                 ),
-                onChanged: (_) => _runCalculation(),
                 validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0 ? 'মোট টাকা দিন' : null,
               ),
               const SizedBox(height: 16),
