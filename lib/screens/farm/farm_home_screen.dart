@@ -4,6 +4,7 @@ import '../../providers/farm_provider.dart';
 import 'universal_entry_form.dart';
 import 'create_batch_screen.dart';
 import 'batch_list_screen.dart';
+import 'farm_transaction_list_screen.dart';
 
 class FarmHomeScreen extends StatelessWidget {
   const FarmHomeScreen({super.key});
@@ -16,6 +17,18 @@ class FarmHomeScreen extends StatelessWidget {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: const Text("খামারি হিসাব", style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.list_alt),
+            tooltip: "সব লেনদেন",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FarmTransactionListScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -212,7 +225,7 @@ class FarmHomeScreen extends StatelessWidget {
                     title: Text(tx.productName, style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(tx.note.isNotEmpty ? tx.note : "কোনো নোট নেই"),
                     trailing: Text(
-                      "\( {isIncome ? '+' : '-'}৳ \){tx.totalAmount.toStringAsFixed(0)}",
+                      "${isIncome ? '+' : '-'}৳${tx.totalAmount.toStringAsFixed(0)}",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: isIncome ? Colors.green.shade700 : Colors.red.shade700,
