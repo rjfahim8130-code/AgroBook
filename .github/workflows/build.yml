@@ -30,11 +30,11 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
+      - name: Create Android Platform
+        run: flutter create . --project-name agrobook --platforms android --offline || true
+
       - name: Generate App Icons
         run: dart run flutter_launcher_icons
-
-      - name: Create Android Platform (if needed)
-        run: flutter create . --project-name agrobook --platforms android --offline || true
 
       - name: Build Release APK
         run: flutter build apk --release
