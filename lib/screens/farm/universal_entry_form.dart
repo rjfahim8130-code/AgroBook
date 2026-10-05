@@ -1,3 +1,4 @@
+Import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/transaction_model.dart';
@@ -32,12 +33,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
   final _taController = TextEditingController();
   final _noteController = TextEditingController();
 
-  final _qtyFocus = FocusNode();
-  final _wpuFocus = FocusNode();
-  final _twFocus = FocusNode();
-  final _ppuFocus = FocusNode();
-  final _ppwFocus = FocusNode();
-  final _taFocus = FocusNode();
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -48,32 +44,22 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
       final tx = widget.editTx!;
       selectedType = tx.type;
       _nameController.text = tx.productName;
-      _qtyController.text = tx.quantity > 0 ? _formatNumber(tx.quantity) : '';
-      _wpuController.text = tx.weightPerUnit > 0 ? _formatNumber(tx.weightPerUnit) : '';
-      _twController.text = tx.totalWeight > 0 ? _formatNumber(tx.totalWeight) : '';
-      _ppuController.text = tx.pricePerUnit > 0 ? _formatNumber(tx.pricePerUnit) : '';
-      _ppwController.text = tx.pricePerWeight > 0 ? _formatNumber(tx.pricePerWeight) : '';
-      _taController.text = tx.totalAmount > 0 ? _formatNumber(tx.totalAmount) : '';
+      _qtyController.text = tx.quantity > 0 ? tx.quantity.toString() : '';
+      _wpuController.text = tx.weightPerUnit > 0 ? tx.weightPerUnit.toString() : '';
+      _twController.text = tx.totalWeight > 0 ? tx.totalWeight.toString() : '';
+      _ppuController.text = tx.pricePerUnit > 0 ? tx.pricePerUnit.toString() : '';
+      _ppwController.text = tx.pricePerWeight > 0 ? tx.pricePerWeight.toString() : '';
+      _taController.text = tx.totalAmount > 0 ? tx.totalAmount.toString() : '';
       _noteController.text = tx.note;
     }
-
-    _qtyFocus.addListener(_handleFocusChange);
-    _wpuFocus.addListener(_handleFocusChange);
-    _twFocus.addListener(_handleFocusChange);
-    _ppuFocus.addListener(_handleFocusChange);
-    _ppwFocus.addListener(_handleFocusChange);
-    _taFocus.addListener(_handleFocusChange);
   }
 
-  void _handleFocusChange() {
-    if (!_qtyFocus.hasFocus &&
-        !_wpuFocus.hasFocus &&
-        !_twFocus.hasFocus &&
-        !_ppuFocus.hasFocus &&
-        !_ppwFocus.hasFocus &&
-        !_taFocus.hasFocus) {
+  // স্মার্ট টাইপিং ডিটেক্টর: টাইপিং থামলে ৫০০ মিলি সেকেন্ড পর লাইভ হিসাব হবে
+  void _onInputChanged() {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
       _calculateAll();
-    }
+    });
   }
 
   String _formatNumber(double val) {
@@ -89,41 +75,63 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
     double ppw = double.tryParse(_ppwController.text) ?? 0;
     double ta = double.tryParse(_taController.text) ?? 0;
 
-    // ১. মোট ওজন ক্যালকুলেশন (পরিমাণ ও একক ওজন থাকলে)
+    // ১. ওজন সংক্রান্ত হিসাব (পরিমাণ, একক ওজন, মোট ওজন)
     if (qty > 0 && wpu > 0) {
       tw = qty * wpu;
-    } else if (tw > 0 && qty > 0 && wpu == 0) {
-      wpu = tw / qty;
     } else if (tw > 0 && wpu > 0 && qty == 0) {
       qty = tw / wpu;
+    } else if (tw > 0 && qty > 0 && wpu == 0) {
+      wpu = tw / qty;
     }
 
-    // ২. মোট টাকা ক্যালকুলেশন (পিস বা ওজনের দাম থাকলে)
+    // ২. মোট টাকা বের করার হিসাব
     if (qty > 0 && ppu > 0) {
       ta = qty * ppu;
     } else if (tw > 0 && ppw > 0) {
       ta = tw * ppw;
     }
 
-    // ৩. রিভার্স ক্যালকুলেশন (যদি মোট টাকা ম্যানুয়ালি ইনপুট দেওয়া থাকে)
+    // ৩. মোট টাকা জানা থাকলে বাকি দর/পিস বা দর/কেজি বের করা
     if (ta > 0) {
       if (qty > 0 && ppu == 0) ppu = ta / qty;
       if (tw > 0 && ppw == 0) ppw = ta / tw;
+      if (ppu > 0 && qty == 0) qty = ta / ppu;
+      if (ppw > 0 && tw == 0) tw = ta / ppw;
     }
 
-    setState(() {
-      _qtyController.text = _formatNumber(qty);
-      _wpuController.text = _formatNumber(wpu);
-      _twController.text = _formatNumber(tw);
-      _ppuController.text = _formatNumber(ppu);
-      _ppwController.text = _formatNumber(ppw);
-      _taController.text = _formatNumber(ta);
-    });
+    // পুনরায় ওজনের সম্পর্ক মেলানো
+    if (qty > 0 && wpu > 0 && tw == 0) tw = qty * wpu;
+    if (tw > 0 && qty > 0 && wpu == 0) wpu = tw / qty;
+
+    // UI ফোকাস নষ্ট না করে লাইভ মান আপডেট
+    if (mounted) {
+      setState(() {
+        if (tw > 0 && _twController.text != _formatNumber(tw)) {
+          _twController.text = _formatNumber(tw);
+        }
+        if (wpu > 0 && _wpuController.text != _formatNumber(wpu)) {
+          _wpuController.text = _formatNumber(wpu);
+        }
+        if (qty > 0 && _qtyController.text != _formatNumber(qty)) {
+          _qtyController.text = _formatNumber(qty);
+        }
+        if (ppu > 0 && _ppuController.text != _formatNumber(ppu)) {
+          _ppuController.text = _formatNumber(ppu);
+        }
+        if (ppw > 0 && _ppwController.text != _formatNumber(ppw)) {
+          _ppwController.text = _formatNumber(ppw);
+        }
+        if (ta > 0 && _taController.text != _formatNumber(ta)) {
+          _taController.text = _formatNumber(ta);
+        }
+      });
+    }
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // সেভ বাটন প্রেস করলে চূড়ান্ত হিসাব
     _calculateAll();
 
     final total = double.tryParse(_taController.text) ?? 0;
@@ -131,7 +139,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
     if (total <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("পর্যাপ্ত তথ্য পাওয়া যায়নি! মোট টাকা বা দাম/পরিমাণের তথ্য সঠিকভাবে দিন।"),
+          content: Text("সঠিক তথ্য দিন যাতে মোট টাকা হিসাব করা যায়।"),
           backgroundColor: Colors.red,
         ),
       );
@@ -167,13 +175,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
 
   @override
   void dispose() {
-    _qtyFocus.dispose();
-    _wpuFocus.dispose();
-    _twFocus.dispose();
-    _ppuFocus.dispose();
-    _ppwFocus.dispose();
-    _taFocus.dispose();
-
+    _debounceTimer?.cancel();
     _nameController.dispose();
     _qtyController.dispose();
     _wpuController.dispose();
@@ -237,20 +239,18 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   Expanded(
                     child: TextFormField(
                       controller: _qtyController,
-                      focusNode: _qtyFocus,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "পরিমাণ", border: OutlineInputBorder()),
-                      onChanged: (_) => _calculateAll(),
+                      onChanged: (_) => _onInputChanged(),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
                       controller: _wpuController,
-                      focusNode: _wpuFocus,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "একক ওজন (কেজি)", border: OutlineInputBorder()),
-                      onChanged: (_) => _calculateAll(),
+                      onChanged: (_) => _onInputChanged(),
                     ),
                   ),
                 ],
@@ -259,13 +259,12 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
 
               TextFormField(
                 controller: _twController,
-                focusNode: _twFocus,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: "মোট ওজন (কেজি)",
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (_) => _calculateAll(),
+                onChanged: (_) => _onInputChanged(),
               ),
               const SizedBox(height: 16),
 
@@ -274,20 +273,18 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   Expanded(
                     child: TextFormField(
                       controller: _ppuController,
-                      focusNode: _ppuFocus,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "দাম / পিস", border: OutlineInputBorder()),
-                      onChanged: (_) => _calculateAll(),
+                      onChanged: (_) => _onInputChanged(),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
                       controller: _ppwController,
-                      focusNode: _ppwFocus,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: "দাম / কেজি", border: OutlineInputBorder()),
-                      onChanged: (_) => _calculateAll(),
+                      onChanged: (_) => _onInputChanged(),
                     ),
                   ),
                 ],
@@ -296,7 +293,6 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
 
               TextFormField(
                 controller: _taController,
-                focusNode: _taFocus,
                 keyboardType: TextInputType.number,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
@@ -308,6 +304,7 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                   border: OutlineInputBorder(),
                   prefixText: "৳ ",
                 ),
+                onChanged: (_) => _onInputChanged(),
               ),
               const SizedBox(height: 16),
 
@@ -330,9 +327,9 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: _save,
-                  child: Text(
-                    widget.editTx != null ? "আপডেট করুন" : "সেভ করুন",
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  child: const Text(
+                    "সেভ করুন",
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
