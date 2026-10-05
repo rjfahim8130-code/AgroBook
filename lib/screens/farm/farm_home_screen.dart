@@ -5,6 +5,7 @@ import 'universal_entry_form.dart';
 import 'create_batch_screen.dart';
 import 'batch_list_screen.dart';
 import 'farm_transaction_list_screen.dart';
+import 'report_screen.dart';
 
 class FarmHomeScreen extends StatelessWidget {
   const FarmHomeScreen({super.key});
@@ -18,6 +19,16 @@ class FarmHomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text("খামারি হিসাব", style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: "রিপোর্ট / PDF",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReportScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.list_alt),
             tooltip: "সব লেনদেন",
