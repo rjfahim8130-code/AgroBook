@@ -219,18 +219,20 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _transactionTile(tx) {
+  Widget _transactionTile(dynamic tx) {
     final isIncome = tx.type == 'income';
-    final isLoan = tx.type == 'loan_given' || tx.type == 'loan_taken';
+    final isLoanGiven = tx.type == 'loan_given';
     final isDonation = tx.type == 'donation';
 
     Color color = isIncome
         ? Colors.green
         : isDonation
             ? Colors.purple
-            : isLoan
+            : (tx.type == 'loan_given' || tx.type == 'loan_taken')
                 ? Colors.orange
                 : Colors.red;
+
+    String prefix = (isIncome || isLoanGiven) ? '+' : '-';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -247,7 +249,7 @@ class HomeScreen extends StatelessWidget {
                 ? Icons.arrow_downward
                 : isDonation
                     ? Icons.favorite
-                    : isLoan
+                    : (tx.type == 'loan_given' || tx.type == 'loan_taken')
                         ? Icons.account_balance_wallet
                         : Icons.arrow_upward,
             color: color,
@@ -260,7 +262,7 @@ class HomeScreen extends StatelessWidget {
           style: const TextStyle(fontSize: 12, color: Colors.black54),
         ),
         trailing: Text(
-          "\( {isIncome || tx.type == 'loan_given' ? '+' : '-'}৳ \){tx.amount.toStringAsFixed(0)}",
+          "$prefix৳${tx.amount.toStringAsFixed(0)}",
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: color,
