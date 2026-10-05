@@ -67,19 +67,23 @@ class _UniversalEntryFormState extends State<UniversalEntryForm> {
       totalAmount: double.tryParse(_taController.text) ?? 0,
     );
 
-    void updateIfEmpty(TextEditingController c, double value) {
-      if ((double.tryParse(c.text) ?? 0) == 0 && value > 0) {
-        c.text = value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 2);
+    // শুধু যে ঘর এখন খালি বা ০ আছে, সেগুলোতেই অটো-ফিল করা হবে
+    void updateIfNeeded(TextEditingController controller, double newValue) {
+      final current = double.tryParse(controller.text) ?? 0;
+      if (current <= 0 && newValue > 0) {
+        controller.text = newValue.toStringAsFixed(
+          newValue.truncateToDouble() == newValue ? 0 : 2,
+        );
       }
     }
 
     setState(() {
-      updateIfEmpty(_qtyController, result['quantity']!);
-      updateIfEmpty(_wpuController, result['weightPerUnit']!);
-      updateIfEmpty(_twController, result['totalWeight']!);
-      updateIfEmpty(_ppuController, result['pricePerUnit']!);
-      updateIfEmpty(_ppwController, result['pricePerWeight']!);
-      updateIfEmpty(_taController, result['totalAmount']!);
+      updateIfNeeded(_qtyController, result['quantity']!);
+      updateIfNeeded(_wpuController, result['weightPerUnit']!);
+      updateIfNeeded(_twController, result['totalWeight']!);
+      updateIfNeeded(_ppuController, result['pricePerUnit']!);
+      updateIfNeeded(_ppwController, result['pricePerWeight']!);
+      updateIfNeeded(_taController, result['totalAmount']!);
     });
 
     _isCalculating = false;
