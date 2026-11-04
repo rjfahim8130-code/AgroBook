@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ফারিহার সাথে চ্যাট</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --surface: #1a1a1a;
+            --surface2: #242424;
+            --gold: #d4af37;
+            --gold-dark: #b8962e;
+            --text: #ffffff;
+            --text2: #aaaaaa;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --radius: 14px;
+            --nav-h: 62px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== SCREENS ===== */
+        .screen {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+        .screen.active { display: flex; }
+
+        /* Normal screens need space for bottom nav */
+        .screen.with-nav {
+            padding-bottom: var(--nav-h);
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            padding: 14px 16px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 17px;
+            background: var(--surface);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            color: var(--gold);
+            flex-shrink: 0;
+        }
+
+        /* ===== HOME ===== */
+        .home-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .balance-card {
+            background: linear-gradient(145deg, #2a2418, #1a1a1a);
+            border: 1px solid var(--gold);
+            border-radius: 18px;
+            padding: 22px 18px;
+            text-align: center;
+        }
+        .balance-label { font-size: 13px; color: var(--text2); }
+        .balance-amount {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--gold);
+            margin: 6px 0 4px;
+        }
+        .balance-sub { font-size: 12px; color: var(--text2); }
+
+        .menu-btn {
+            background: var(--surface);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            transition: background 0.15s;
+        }
+        .menu-btn:active { background: var(--surface2); }
+        .menu-btn .arrow { color: var(--gold); font-size: 18px; }
+
+        /* ===== EARN ===== */
+        .earn-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .earn-info {
+            text-align: center;
+            color: var(--text2);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .ad-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .ad-btn.primary { background: var(--gold); color: #000; }
+        .ad-btn.secondary {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+        .ad-btn .sub { font-size: 12px; font-weight: 500; opacity: 0.8; }
+        .ad-btn:active { opacity: 0.85; }
+
+        .limit-box {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: var(--text2);
+            text-align: center;
+        }
+
+        /* ===== GIFT ===== */
+        .gift-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .gift-input-wrap {
+            background: var(--surface);
+            border-radius: 14px;
+            padding: 16px;
+        }
+        .gift-input-wrap label {
+            font-size: 13px;
+            color: var(--text2);
+            display: block;
+            margin-bottom: 8px;
+        }
+        .gift-input-wrap input {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid #444;
+            color: #fff;
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            outline: none;
+        }
+        .gift-presets { display: flex; gap: 8px; flex-wrap: wrap; }
+        .preset-btn {
+            flex: 1;
+            min-width: 70px;
+            padding: 10px;
+            background: var(--surface2);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text);
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .preset-btn:active { border-color: var(--gold); color: var(--gold); }
+
+        .gift-submit {
+            width: 100%;
+            padding: 16px;
+            background: var(--gold);
+            color: #000;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .gift-submit:active { opacity: 0.9; }
+        .gift-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ===== CHAT (FIXED LAYOUT) ===== */
+        #screen-chat {
+            padding-bottom: 0 !important;
+        }
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 0;
+            -webkit-overflow-scrolling: touch;
+        }
+        .message {
+            max-width: 78%;
+            padding: 10px 13px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.45;
+            word-wrap: break-word;
+        }
+        .user-msg {
+            background: var(--gold);
+            color: #000;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            font-weight: 500;
+        }
+        .admin-msg {
+            background: var(--surface2);
+            color: #fff;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-time {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
+
+        /* Input stays ABOVE bottom nav */
+        .chat-input-wrap {
+            flex-shrink: 0;
+            background: var(--surface);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 10px 12px;
+            padding-bottom: calc(10px + var(--nav-h));
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .chat-input-wrap input {
+            flex: 1;
+            padding: 11px 14px;
+            background: #2c2c2c;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 22px;
+            outline: none;
+            font-size: 14px;
+        }
+        .send-btn {
+            background: var(--gold);
+            color: #000;
+            border: none;
+            padding: 11px 18px;
+            border-radius: 22px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        /* ===== PROFILE ===== */
+        .profile-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .profile-card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 24px 18px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .profile-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--gold), #8a7020);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 800;
+            color: #000;
+            margin: 0 auto 12px;
+        }
+        .profile-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gold);
+            margin-bottom: 4px;
+        }
+        .profile-meta {
+            font-size: 13px;
+            color: var(--text2);
+            margin-top: 6px;
+        }
+        .stats-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .stat-box {
+            flex: 1;
+            background: var(--surface2);
+            border-radius: 12px;
+            padding: 14px 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gold);
+        }
+        .stat-label {
+            font-size: 11px;
+            color: var(--text2);
+            margin-top: 4px;
+        }
+
+        /* ===== BOTTOM NAV ===== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--nav-h);
+            background: var(--surface);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            color: var(--text2);
+            font-size: 11px;
+            cursor: pointer;
+            padding: 6px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .nav-item .icon { font-size: 20px; line-height: 1; }
+        .nav-item.active {
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface2);
+            color: #fff;
+            padding: 12px 22px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            border: 1px solid var(--gold);
+            white-space: nowrap;
+            max-width: 90vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .toast.show { opacity: 1; }
+
+        .empty-chat {
+            text-align: center;
+            color: var(--text2);
+            padding: 40px 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- ========== HOME ========== -->
+    <div id="screen-home" class="screen with-nav active">
+        <div class="header">ফারিহার সাথে চ্যাট</div>
+        <div class="home-body">
+            <div class="balance-card">
+                <div class="balance-label">আপনার কয়েন ব্যালেন্স</div>
+                <div class="balance-amount" id="coin-balance">0</div>
+                <div class="balance-sub">কয়েন</div>
+            </div>
+
+            <div class="menu-btn" onclick="switchScreen('screen-earn')">
+                <span>⭐ কয়েন অর্জন করুন</span>
+                <span class="arrow">→</span>
+            </div>
+            <div class="menu-btn" onclick="switchScreen('screen-chat')">
+                <span>💬 ফারিহার সাথে চ্যাট</span>
+                <span class="arrow">→</span>
+            </div>
+            <div class="menu-btn" onclick="switchScreen('screen-gift')">
+                <span>🎁 কয়েন গিফট করুন</span>
+                <span class="arrow">→</span>
+            </div>
+            <div class="menu-btn" onclick="switchScreen('screen-profile')">
+                <span>👤 আমার প্রোফাইল</span>
+                <span class="arrow">→</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== EARN ========== -->
+    <div id="screen-earn" class="screen with-nav">
+        <div class="header">কয়েন অর্জন করুন</div>
+        <div class="earn-body">
+            <div class="earn-info">
+                বিজ্ঞাপন দেখে কয়েন সংগ্রহ করুন।<br>
+                পরে আপনি চাইলে ফারিহাকে গিফট করতে পারবেন।
+            </div>
+
+            <!-- Primary Monetag (SDK পরে যোগ হবে) -->
+            <button class="ad-btn primary" onclick="watchMonetagRewarded()">
+                <span>▶ বিজ্ঞাপন দেখুন (+15 কয়েন)</span>
+                <span class="sub">Monetag Rewarded • প্রধান অপশন</span>
+            </button>
+
+            <!-- Backup Smartlinks - KEEP THESE -->
+            <button class="ad-btn secondary" onclick="openSmartlink('adsterra')">
+                <span>🔗 অতিরিক্ত অফার (+8 কয়েন)</span>
+                <span class="sub">Adsterra • ব্যাকআপ</span>
+            </button>
+
+            <button class="ad-btn secondary" onclick="openSmartlink('hilltop')">
+                <span>🔗 অন্য অফার (+8 কয়েন)</span>
+                <span class="sub">HilltopAds • ব্যাকআপ</span>
+            </button>
+
+            <div class="limit-box" id="limit-info">
+                আজকের লিমিট: Monetag 0/10 • ব্যাকআপ 0/6
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== GIFT ========== -->
+    <div id="screen-gift" class="screen with-nav">
+        <div class="header">কয়েন গিফট করুন</div>
+        <div class="gift-body">
+            <div class="earn-info">
+                আপনার কয়েন ফারিহাকে উপহার দিন।<br>
+                বর্তমান ব্যালেন্স: <strong id="gift-balance" style="color:var(--gold)">0</strong> কয়েন
+            </div>
+
+            <div class="gift-input-wrap">
+                <label>কত কয়েন পাঠাবেন?</label>
+                <input type="number" id="gift-amount" placeholder="উদাহরণ: 50" min="10" inputmode="numeric">
+            </div>
+
+            <div class="gift-presets">
+                <button class="preset-btn" onclick="setGiftAmount(20)">20</button>
+                <button class="preset-btn" onclick="setGiftAmount(50)">50</button>
+                <button class="preset-btn" onclick="setGiftAmount(100)">100</button>
+                <button class="preset-btn" onclick="setGiftAmount(200)">200</button>
+            </div>
+
+            <button class="gift-submit" id="gift-btn" onclick="sendGift()">ফারিহাকে গিফট করুন</button>
+        </div>
+    </div>
+
+    <!-- ========== CHAT (FIXED) ========== -->
+    <div id="screen-chat" class="screen">
+        <div class="header">ফারিহার সাথে সরাসরি চ্যাট</div>
+        <div id="chat-container">
+            <div class="empty-chat" id="empty-chat">
+                এখনো কোনো মেসেজ নেই।<br>নিচে লিখে পাঠান!
+            </div>
+        </div>
+        <div class="chat-input-wrap">
+            <input type="text" id="message-input" placeholder="আপনার বার্তা লিখুন..." autocomplete="off">
+            <button class="send-btn" onclick="sendMessage()">পাঠান</button>
+        </div>
+    </div>
+
+    <!-- ========== PROFILE ========== -->
+    <div id="screen-profile" class="screen with-nav">
+        <div class="header">আমার প্রোফাইল</div>
+        <div class="profile-body">
+            <div class="profile-card">
+                <div class="profile-avatar" id="profile-avatar">?</div>
+                <div class="profile-name" id="profile-name">লোড হচ্ছে...</div>
+                <div class="profile-meta" id="profile-username">ইউজারনেম: --</div>
+                <div class="profile-meta" id="profile-id">টেলিগ্রাম আইডি: --</div>
+
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-balance">0</div>
+                        <div class="stat-label">বর্তমান কয়েন</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-earned">0</div>
+                        <div class="stat-label">মোট অর্জিত</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-gifted">0</div>
+                        <div class="stat-label">গিফট করা</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== BOTTOM NAV ========== -->
+    <div class="bottom-nav">
+        <div class="nav-item active" id="nav-home" onclick="switchScreen('screen-home')">
+            <span class="icon">🏠</span>
+            <span>হোম</span>
+        </div>
+        <div class="nav-item" id="nav-earn" onclick="switchScreen('screen-earn')">
+            <span class="icon">⭐</span>
+            <span>আর্ন</span>
+        </div>
+        <div class="nav-item" id="nav-chat" onclick="switchScreen('screen-chat')">
+            <span class="icon">💬</span>
+            <span>চ্যাট</span>
+        </div>
+        <div class="nav-item" id="nav-profile" onclick="switchScreen('screen-profile')">
+            <span class="icon">👤</span>
+            <span>প্রোফাইল</span>
+        </div>
+    </div>
+
+    <script>
+        // ===================== CONFIG =====================
+        const SMARTLINKS = {
+            adsterra: "https://asiafilm.org/4/e3dcb84609e924772d39878b3dcaad11",
+            hilltop:  "https://motionless-bus.com/HXrkS6"
+        };
+
+        // Monetag Zone IDs — পরে যোগ করবেন
+        const MONETAG_REWARDED_ZONE = "YOUR_REWARDED_ZONE_ID";
+        const MONETAG_INTERSTITIAL_ZONE = "YOUR_INTERSTITIAL_ZONE_ID";
+
+        const COIN_REWARD = {
+            monetag: 15,
+            smartlink: 8
+        };
+
+        const DAILY_LIMIT = {
+            monetag: 10,
+            smartlink: 6
+        };
+
+        // ===================== TELEGRAM =====================
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+            try {
+                tg.setHeaderColor("#1a1a1a");
+                tg.setBackgroundColor("#0f0f0f");
+            } catch(e) {}
+        }
+
+        const user = tg?.initDataUnsafe?.user || null;
+        const userId = user ? user.id : 99999999;
+        const userName = user ? (user.first_name + (user.last_name ? " " + user.last_name : "")) : "অতিথি";
+        const userHandle = user?.username ? "@" + user.username : "নেই";
+
+        // ===================== SUPABASE =====================
+        const SUPABASE_URL = "https://bagscbfokioflnuyxcuz.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhZ3NjYmZva2lvZmxudXl4Y3V6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0MjAxOTEsImV4cCI6MjEwODk5NjE5MX0.9iU1vhruNSO54Van2GIBM1OrofuUfplWtPC7O7cV60s";
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ===================== STATE =====================
+        let coins = 0;
+        let totalEarned = 0;
+        let totalGifted = 0;
+        let todayMonetag = 0;
+        let todaySmartlink = 0;
+
+        const LS_KEY = `fariha_${userId}`;
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(LS_KEY);
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    const today = new Date().toDateString();
+                    coins = data.coins || 0;
+                    totalEarned = data.totalEarned || 0;
+                    totalGifted = data.totalGifted || 0;
+                    if (data.date === today) {
+                        todayMonetag = data.todayMonetag || 0;
+                        todaySmartlink = data.todaySmartlink || 0;
+                    }
+                }
+            } catch (e) {}
+            updateUI();
+        }
+
+        function saveState() {
+            localStorage.setItem(LS_KEY, JSON.stringify({
+                coins,
+                totalEarned,
+                totalGifted,
+                todayMonetag,
+                todaySmartlink,
+                date: new Date().toDateString()
+            }));
+        }
+
+        function updateUI() {
+            document.getElementById("coin-balance").textContent = coins;
+            document.getElementById("gift-balance").textContent = coins;
+            document.getElementById("stat-balance").textContent = coins;
+            document.getElementById("stat-earned").textContent = totalEarned;
+            document.getElementById("stat-gifted").textContent = totalGifted;
+            document.getElementById("limit-info").textContent =
+                `আজকের লিমিট: Monetag ${todayMonetag}/${DAILY_LIMIT.monetag} • ব্যাকআপ ${todaySmartlink}/${DAILY_LIMIT.smartlink}`;
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById("toast");
+            t.textContent = msg;
+            t.classList.add("show");
+            setTimeout(() => t.classList.remove("show"), 2500);
+        }
+
+        // ===================== NAVIGATION =====================
+        function switchScreen(id) {
+            document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+            document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+            document.getElementById(id).classList.add("active");
+
+            const map = {
+                "screen-home": "nav-home",
+                "screen-earn": "nav-earn",
+                "screen-chat": "nav-chat",
+                "screen-profile": "nav-profile",
+                "screen-gift": "nav-home"
+            };
+            if (map[id]) document.getElementById(map[id])?.classList.add("active");
+
+            if (id === "screen-chat") {
+                loadMessages();
+                setTimeout(() => {
+                    scrollToBottom();
+                    document.getElementById("message-input")?.focus();
+                }, 150);
+            }
+            if (id === "screen-gift") {
+                document.getElementById("gift-balance").textContent = coins;
+            }
+        }
+
+        // ===================== PROFILE =====================
+        function initProfile() {
+            document.getElementById("profile-name").textContent = userName;
+            document.getElementById("profile-username").textContent = `ইউজারনেম: ${userHandle}`;
+            document.getElementById("profile-id").textContent = `টেলিগ্রাম আইডি: ${userId}`;
+            const avatar = document.getElementById("profile-avatar");
+            if (userName && userName !== "অতিথি") {
+                avatar.textContent = userName.charAt(0).toUpperCase();
+            }
+        }
+
+        // ===================== EARN =====================
+        function addCoins(amount, source) {
+            coins += amount;
+            totalEarned += amount;
+            if (source === "monetag") todayMonetag++;
+            if (source === "smartlink") todaySmartlink++;
+            saveState();
+            updateUI();
+            showToast(`+${amount} কয়েন যোগ হয়েছে!`);
+        }
+
+        function watchMonetagRewarded() {
+            if (todayMonetag >= DAILY_LIMIT.monetag) {
+                showToast("আজকের Monetag লিমিট শেষ");
+                return;
+            }
+            // Monetag SDK পরে যোগ করবেন
+            // এখন ডেমো
+            if (confirm("Monetag Rewarded অ্যাড দেখবেন? (ডেমো — পরে আসল SDK যোগ হবে)")) {
+                addCoins(COIN_REWARD.monetag, "monetag");
+            }
+        }
+
+        function openSmartlink(network) {
+            if (todaySmartlink >= DAILY_LIMIT.smartlink) {
+                showToast("আজকের ব্যাকআপ লিমিট শেষ");
+                return;
+            }
+
+            const url = SMARTLINKS[network];
+            if (!url || url.includes("your-")) {
+                showToast("স্মার্টলিংক সেট করা হয়নি");
+                return;
+            }
+
+            if (tg?.openLink) {
+                tg.openLink(url);
+            } else {
+                window.open(url, "_blank");
+            }
+
+            setTimeout(() => {
+                addCoins(COIN_REWARD.smartlink, "smartlink");
+            }, 1800);
+        }
+
+        // ===================== GIFT =====================
+        function setGiftAmount(val) {
+            document.getElementById("gift-amount").value = val;
+        }
+
+        async function sendGift() {
+            const amount = parseInt(document.getElementById("gift-amount").value, 10);
+            if (!amount || amount < 10) {
+                showToast("কমপক্ষে ১০ কয়েন দিন");
+                return;
+            }
+            if (amount > coins) {
+                showToast("পর্যাপ্ত কয়েন নেই");
+                return;
+            }
+
+            coins -= amount;
+            totalGifted += amount;
+            saveState();
+            updateUI();
+            document.getElementById("gift-amount").value = "";
+            showToast(`${amount} কয়েন ফারিহাকে পাঠানো হয়েছে 🎁`);
+
+            try {
+                await _supabase.from("gifts").insert([{
+                    user_id: userId,
+                    user_name: userName,
+                    amount: amount
+                }]);
+            } catch (e) {}
+        }
+
+        // ===================== CHAT =====================
+        const chatContainer = document.getElementById("chat-container");
+        const messageInput = document.getElementById("message-input");
+        const emptyChat = document.getElementById("empty-chat");
+
+        async function loadMessages() {
+            try {
+                const { data, error } = await _supabase
+                    .from("messages")
+                    .select("*")
+                    .eq("user_id", userId)
+                    .order("created_at", { ascending: true });
+
+                if (error) {
+                    console.error("Load messages error:", error);
+                    return;
+                }
+
+                chatContainer.innerHTML = "";
+                if (!data || data.length === 0) {
+                    chatContainer.innerHTML = `<div class="empty-chat" id="empty-chat">এখনো কোনো মেসেজ নেই।<br>নিচে লিখে পাঠান!</div>`;
+                } else {
+                    data.forEach(msg => appendMessageUI(msg));
+                    scrollToBottom();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text) return;
+            messageInput.value = "";
+
+            // Optimistic UI
+            const tempMsg = {
+                user_id: userId,
+                user_name: userName,
+                message: text,
+                sender_type: "user",
+                created_at: new Date().toISOString()
+            };
+            // Remove empty state if present
+            const empty = document.getElementById("empty-chat");
+            if (empty) empty.remove();
+            appendMessageUI(tempMsg);
+            scrollToBottom();
+
+            const { error } = await _supabase
+                .from("messages")
+                .insert([{
+                    user_id: userId,
+                    user_name: userName,
+                    message: text,
+                    sender_type: "user"
+                }]);
+
+            if (error) {
+                showToast("মেসেজ পাঠাতে সমস্যা হয়েছে");
+                console.error(error);
+            }
+        }
+
+        function appendMessageUI(msg) {
+            const div = document.createElement("div");
+            div.classList.add("message");
+            div.classList.add(msg.sender_type === "user" ? "user-msg" : "admin-msg");
+            div.textContent = msg.message;
+            chatContainer.appendChild(div);
+        }
+
+        function scrollToBottom() {
+            requestAnimationFrame(() => {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            });
+        }
+
+        messageInput?.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Realtime listener
+        _supabase
+            .channel("public:messages:" + userId)
+            .on("postgres_changes", {
+                event: "INSERT",
+                schema: "public",
+                table: "messages",
+                filter: `user_id=eq.${userId}`
+            }, payload => {
+                // Avoid duplicate if we already added optimistically for user messages
+                if (payload.new.sender_type === "admin") {
+                    const empty = document.getElementById("empty-chat");
+                    if (empty) empty.remove();
+                    appendMessageUI(payload.new);
+                    scrollToBottom();
+                }
+            })
+            .subscribe();
+
+        // ===================== INIT =====================
+        initProfile();
+        loadState();
+        // Don't auto-load messages until chat screen is opened
+    </script>
+</body>
+</html>
