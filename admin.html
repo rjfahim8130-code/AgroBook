@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>অ্যাডমিন প্যানেল — ফারিহা</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { overflow: auto; height: auto; min-height: 100vh; display: block; }
+        .admin-wrap { max-width: 720px; margin: 0 auto; padding: 16px; padding-bottom: 40px; }
+        .topbar {
+            background: var(--surface);
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            position: sticky; top: 0; z-index: 50;
+        }
+        .topbar h1 { font-size: 16px; color: var(--gold); margin: 0; }
+        .denied {
+            text-align: center; padding: 80px 20px; color: var(--text2);
+        }
+        .denied h2 { color: var(--danger); margin-bottom: 10px; }
+        .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin: 16px 0; }
+        .stat-card {
+            background: var(--surface); border-radius: 12px; padding: 14px 10px;
+            text-align: center; border: 1px solid rgba(255,255,255,0.06);
+        }
+        .stat-card .num { font-size: 22px; font-weight: 800; color: var(--gold); }
+        .stat-card .label { font-size: 11px; color: var(--text2); margin-top: 4px; }
+        .section-title { font-size: 14px; color: var(--gold); margin: 18px 0 10px; font-weight: 700; }
+        .user-item {
+            background: var(--surface); border-radius: 12px; padding: 12px 14px;
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px;
+        }
+        .user-item:active { border-color: var(--gold); }
+        .user-item .name { font-weight: 600; font-size: 14px; }
+        .user-item .meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+        .badge {
+            background: var(--gold); color: #000; font-size: 11px; font-weight: 700;
+            padding: 3px 8px; border-radius: 20px;
+        }
+        .chat-panel {
+            display: none; flex-direction: column; height: 420px;
+            background: var(--surface); border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.08); overflow: hidden; margin-top: 12px;
+        }
+        .chat-panel.open { display: flex; }
+        .chat-panel-header {
+            padding: 12px 14px; background: var(--surface2);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 12px;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .msg {
+            max-width: 80%; padding: 9px 12px; border-radius: 12px;
+            font-size: 13px; line-height: 1.4;
+        }
+        .msg.user { background: #2c2c2c; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg.admin { background: var(--gold); color: #000; align-self: flex-end; border-bottom-right-radius: 4px; font-weight: 500; }
+        .chat-reply {
+            display: flex; gap: 8px; padding: 10px 12px;
+            border-top: 1px solid rgba(255,255,255,0.06); background: var(--surface2);
+        }
+        .chat-reply input {
+            flex: 1; padding: 10px 12px; background: #1a1a1a; border: 1px solid #444;
+            border-radius: 20px; color: #fff; outline: none; font-size: 14px;
+        }
+        .chat-reply button {
+            background: var(--gold); color: #000; border: none;
+            padding: 10px 16px; border-radius: 20px; font-weight: 700; cursor: pointer;
+        }
+        .gift-item {
+            background: var(--surface); border-radius: 10px; padding: 10px 14px;
+            display: flex; justify-content: space-between; font-size: 13px;
+            border: 1px solid rgba(255,255,255,0.05); margin-bottom: 6px;
+        }
+        .gift-item .amount { color: var(--gold); font-weight: 700; }
+        .empty { text-align: center; color: var(--text2); padding: 30px; font-size: 14px; }
+        .refresh-btn {
+            background: var(--surface2); border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text); padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="denied" class="denied" style="display:none;">
+        <h2>অ্যাক্সেস নিষেধ</h2>
+        <p>শুধুমাত্র অ্যাডমিন এই পেজ দেখতে পারবেন।<br>টেলিগ্রাম মিনি অ্যাপ থেকে খুলুন।</p>
+    </div>
+
+    <div id="admin-root" style="display:none;">
+        <div class="topbar">
+            <h1>👑 অ্যাডমিন প্যানেল</h1>
+            <button class="refresh-btn" onclick="loadAll()">রিফ্রেশ</button>
+        </div>
+        <div class="admin-wrap">
+            <div class="stats-row">
+                <div class="stat-card"><div class="num" id="stat-users">0</div><div class="label">ইউজার</div></div>
+                <div class="stat-card"><div class="num" id="stat-msgs">0</div><div class="label">মেসেজ</div></div>
+                <div class="stat-card"><div class="num" id="stat-gifts">0</div><div class="label">গিফট কয়েন</div></div>
+            </div>
+
+            <div class="section-title">💬 চ্যাট ইউজার</div>
+            <div id="user-list"><div class="empty">লোড হচ্ছে...</div></div>
+
+            <div class="chat-panel" id="chat-panel">
+                <div class="chat-panel-header">
+                    <span id="chat-title" style="font-weight:700;color:var(--gold);font-size:14px;">চ্যাট</span>
+                    <button onclick="closeChat()" style="background:none;border:none;color:#aaa;font-size:18px;cursor:pointer;">✕</button>
+                </div>
+                <div class="chat-messages" id="chat-messages"></div>
+                <div class="chat-reply">
+                    <input type="text" id="reply-input" placeholder="রিপ্লাই লিখুন..." autocomplete="off">
+                    <button onclick="sendReply()">পাঠান</button>
+                </div>
+            </div>
+
+            <div class="section-title">🎁 সাম্প্রতিক গিফট</div>
+            <div id="gifts-list"><div class="empty">কোনো গিফট নেই</div></div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+        const CFG = window.APP_CONFIG;
+        const tg = window.Telegram?.WebApp;
+        if (tg) { tg.ready(); tg.expand(); }
+
+        const user = tg?.initDataUnsafe?.user || null;
+        const userId = user ? Number(user.id) : 0;
+        const isAdmin = CFG.ADMIN_IDS.includes(userId);
+
+        // Fallback: allow browser testing with ?key=admin_secret only if needed
+        // Production: only Telegram admin ID
+        if (!isAdmin) {
+            document.getElementById("denied").style.display = "block";
+        } else {
+            document.getElementById("admin-root").style.display = "block";
+        }
+
+        const _supabase = supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+        let currentUid = null, currentUname = "";
+
+        function esc(s) {
+            return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+        }
+
+        async function loadAll() {
+            if (!isAdmin) return;
+            await Promise.all([loadUsers(), loadGifts(), loadStats()]);
+        }
+
+        async function loadStats() {
+            const { count } = await _supabase.from("messages").select("*", { count: "exact", head: true });
+            const { data: gifts } = await _supabase.from("gifts").select("amount");
+            const total = (gifts || []).reduce((s, g) => s + (g.amount || 0), 0);
+            document.getElementById("stat-msgs").textContent = count || 0;
+            document.getElementById("stat-gifts").textContent = total;
+        }
+
+        async function loadUsers() {
+            const { data, error } = await _supabase
+                .from("messages")
+                .select("user_id, user_name, created_at, message")
+                .order("created_at", { ascending: false });
+
+            if (error) {
+                document.getElementById("user-list").innerHTML = `<div class="empty">এরর: ${esc(error.message)}</div>`;
+                return;
+            }
+            const map = {};
+            (data || []).forEach(m => {
+                if (!map[m.user_id]) {
+                    map[m.user_id] = { user_id: m.user_id, user_name: m.user_name || "Unknown", last_at: m.created_at, count: 0 };
+                }
+                map[m.user_id].count++;
+            });
+            const users = Object.values(map).sort((a, b) => new Date(b.last_at) - new Date(a.last_at));
+            document.getElementById("stat-users").textContent = users.length;
+
+            if (!users.length) {
+                document.getElementById("user-list").innerHTML = `<div class="empty">কোনো ইউজার নেই</div>`;
+                return;
+            }
+            document.getElementById("user-list").innerHTML = users.map(u => `
+                <div class="user-item" onclick="openChat(${u.user_id}, '${esc(u.user_name).replace(/'/g,"&#39;")}')">
+                    <div>
+                        <div class="name">${esc(u.user_name)}</div>
+                        <div class="meta">ID: ${u.user_id}</div>
+                    </div>
+                    <div class="badge">${u.count}</div>
+                </div>
+            `).join("");
+        }
+
+        async function loadGifts() {
+            const { data } = await _supabase.from("gifts").select("*").order("created_at", { ascending: false }).limit(20);
+            if (!data || !data.length) {
+                document.getElementById("gifts-list").innerHTML = `<div class="empty">কোনো গিফট নেই</div>`;
+                return;
+            }
+            document.getElementById("gifts-list").innerHTML = data.map(g => `
+                <div class="gift-item">
+                    <div><strong>${esc(g.user_name)}</strong></div>
+                    <div class="amount">+${g.amount}</div>
+                </div>
+            `).join("");
+        }
+
+        async function openChat(uid, uname) {
+            currentUid = uid;
+            currentUname = uname;
+            document.getElementById("chat-title").textContent = uname + " (" + uid + ")";
+            document.getElementById("chat-panel").classList.add("open");
+
+            const { data } = await _supabase.from("messages").select("*").eq("user_id", uid).order("created_at", { ascending: true });
+            const box = document.getElementById("chat-messages");
+            box.innerHTML = (data || []).map(m => `
+                <div class="msg ${m.sender_type === 'admin' ? 'admin' : 'user'}">${esc(m.message)}</div>
+            `).join("") || `<div class="empty">মেসেজ নেই</div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function closeChat() {
+            document.getElementById("chat-panel").classList.remove("open");
+            currentUid = null;
+        }
+
+        async function sendReply() {
+            const input = document.getElementById("reply-input");
+            const text = input.value.trim();
+            if (!text || !currentUid) return;
+            input.value = "";
+            const { error } = await _supabase.from("messages").insert([{
+                user_id: currentUid,
+                user_name: currentUname,
+                message: text,
+                sender_type: "admin"
+            }]);
+            if (error) alert("ব্যর্থ: " + error.message);
+            else openChat(currentUid, currentUname);
+        }
+
+        document.getElementById("reply-input")?.addEventListener("keydown", e => {
+            if (e.key === "Enter") sendReply();
+        });
+
+        if (isAdmin) loadAll();
+    </script>
+</body>
+</html>
