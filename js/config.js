@@ -11,7 +11,7 @@ window.APP_CONFIG = {
 
     // অ্যাডমিন/ওনার প্রোফাইল ছবি (ঐচ্ছিক — লিংক দিলে সবাই দেখবে)
     // খালি রাখলে অ্যাডমিন লগইন করলে তার টেলিগ্রাম ছবি ব্যবহার হবে
-    OWNER_PHOTO_URL: "",
+    OWNER_PHOTO_URL: "https://i.postimg.cc/wT0ZfTSB/file-00000000fcfc8211b04c6079c124233a.png",
 
     // Smartlinks (ব্যাকআপ রিওয়ার্ড)
     SMARTLINKS: {
@@ -26,15 +26,15 @@ window.APP_CONFIG = {
     // কয়েন রেট
     COIN_REWARD: {
         monetag: 15,
-        adsterra: 8,
-        hilltop: 8
+        adsterra: 5,
+        hilltop: 5
     },
 
     // দৈনিক লিমিট
     DAILY_LIMIT: {
         monetag: 10,
-        adsterra: 6,
-        hilltop: 6
+        adsterra: 3,
+        hilltop: 3
     },
 
     // কুলডাউন (মিলিসেকেন্ড)
