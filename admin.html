@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>অ্যাডমিন প্যানেল — ফারিহা</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --surface: #1a1a1a;
+            --surface2: #242424;
+            --gold: #d4af37;
+            --text: #ffffff;
+            --text2: #aaaaaa;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 40px;
+        }
+        .topbar {
+            background: var(--surface);
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .topbar h1 {
+            font-size: 16px;
+            color: var(--gold);
+        }
+        .topbar .status {
+            font-size: 12px;
+            color: var(--text2);
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+        .login-box {
+            max-width: 360px;
+            margin: 80px auto;
+            background: var(--surface);
+            padding: 28px 22px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+            text-align: center;
+        }
+        .login-box h2 {
+            color: var(--gold);
+            margin-bottom: 8px;
+            font-size: 20px;
+        }
+        .login-box p {
+            color: var(--text2);
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--surface2);
+            border: 1px solid #444;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 14px;
+            outline: none;
+            text-align: center;
+            letter-spacing: 4px;
+        }
+        .login-box button {
+            width: 100%;
+            padding: 13px;
+            background: var(--gold);
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .stat-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 14px 10px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .stat-card .num {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--gold);
+        }
+        .stat-card .label {
+            font-size: 11px;
+            color: var(--text2);
+            margin-top: 4px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            color: var(--gold);
+            margin: 18px 0 10px;
+            font-weight: 700;
+        }
+
+        .user-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .user-item {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .user-item:active, .user-item.active {
+            border-color: var(--gold);
+            background: var(--surface2);
+        }
+        .user-item .name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .user-item .meta {
+            font-size: 11px;
+            color: var(--text2);
+            margin-top: 2px;
+        }
+        .user-item .badge {
+            background: var(--gold);
+            color: #000;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 20px;
+        }
+
+        /* Chat panel */
+        .chat-panel {
+            display: none;
+            margin-top: 16px;
+            background: var(--surface);
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.08);
+            overflow: hidden;
+            flex-direction: column;
+            height: 420px;
+        }
+        .chat-panel.open { display: flex; }
+        .chat-panel-header {
+            padding: 12px 14px;
+            background: var(--surface2);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-panel-header .title {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--gold);
+        }
+        .chat-panel-header .close-btn {
+            background: none;
+            border: none;
+            color: var(--text2);
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .msg {
+            max-width: 80%;
+            padding: 9px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .msg.user {
+            background: #2c2c2c;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .msg.admin {
+            background: var(--gold);
+            color: #000;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            font-weight: 500;
+        }
+        .msg .time {
+            font-size: 10px;
+            opacity: 0.55;
+            margin-top: 3px;
+        }
+        .chat-reply {
+            display: flex;
+            gap: 8px;
+            padding: 10px 12px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            background: var(--surface2);
+        }
+        .chat-reply input {
+            flex: 1;
+            padding: 10px 12px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 20px;
+            color: #fff;
+            outline: none;
+            font-size: 14px;
+        }
+        .chat-reply button {
+            background: var(--gold);
+            color: #000;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .gifts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .gift-item {
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .gift-item .amount {
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--text2);
+            padding: 30px;
+            font-size: 14px;
+        }
+        .refresh-btn {
+            background: var(--surface2);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>অ্যাডমিন প্যানেল</h2>
+            <p>শুধুমাত্র অ্যাডমিন প্রবেশ করতে পারবেন</p>
+            <input type="password" id="admin-pin" placeholder="পিন কোড" maxlength="8" inputmode="numeric">
+            <button onclick="tryLogin()">প্রবেশ করুন</button>
+        </div>
+    </div>
+
+    <!-- MAIN ADMIN -->
+    <div id="admin-screen" style="display:none;">
+        <div class="topbar">
+            <h1>👑 অ্যাডমিন প্যানেল</h1>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <button class="refresh-btn" onclick="loadAll()">রিফ্রেশ</button>
+                <span class="status" id="conn-status">কানেক্টেড</span>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="num" id="stat-users">0</div>
+                    <div class="label">মোট ইউজার</div>
+                </div>
+                <div class="stat-card">
+                    <div class="num" id="stat-msgs">0</div>
+                    <div class="label">মোট মেসেজ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="num" id="stat-gifts">0</div>
+                    <div class="label">মোট গিফট</div>
+                </div>
+            </div>
+
+            <div class="section-title">💬 চ্যাট ইউজারদের তালিকা</div>
+            <div class="user-list" id="user-list">
+                <div class="empty">লোড হচ্ছে...</div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div class="chat-panel" id="chat-panel">
+                <div class="chat-panel-header">
+                    <div class="title" id="chat-title">চ্যাট</div>
+                    <button class="close-btn" onclick="closeChat()">✕</button>
+                </div>
+                <div class="chat-messages" id="chat-messages"></div>
+                <div class="chat-reply">
+                    <input type="text" id="reply-input" placeholder="রিপ্লাই লিখুন..." autocomplete="off">
+                    <button onclick="sendAdminReply()">পাঠান</button>
+                </div>
+            </div>
+
+            <div class="section-title">🎁 সাম্প্রতিক গিফট</div>
+            <div class="gifts-list" id="gifts-list">
+                <div class="empty">কোনো গিফট নেই</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONFIG ==========
+        // অ্যাডমিন পিন (নিজের মতো পরিবর্তন করুন)
+        const ADMIN_PIN = "1234";
+
+        const SUPABASE_URL = "https://bagscbfokioflnuyxcuz.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhZ3NjYmZva2lvZmxudXl4Y3V6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0MjAxOTEsImV4cCI6MjEwODk5NjE5MX0.9iU1vhruNSO54Van2GIBM1OrofuUfplWtPC7O7cV60s";
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentChatUserId = null;
+        let currentChatUserName = "";
+
+        // ========== LOGIN ==========
+        function tryLogin() {
+            const pin = document.getElementById("admin-pin").value.trim();
+            if (pin === ADMIN_PIN) {
+                sessionStorage.setItem("admin_ok", "1");
+                showAdmin();
+            } else {
+                alert("পিন ভুল!");
+            }
+        }
+
+        function showAdmin() {
+            document.getElementById("login-screen").style.display = "none";
+            document.getElementById("admin-screen").style.display = "block";
+            loadAll();
+        }
+
+        // Auto login if already authenticated this session
+        if (sessionStorage.getItem("admin_ok") === "1") {
+            showAdmin();
+        }
+
+        document.getElementById("admin-pin")?.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") tryLogin();
+        });
+
+        // ========== LOAD DATA ==========
+        async function loadAll() {
+            await Promise.all([loadUsers(), loadGifts(), loadStats()]);
+        }
+
+        async function loadStats() {
+            const { count: msgCount } = await _supabase
+                .from("messages")
+                .select("*", { count: "exact", head: true });
+
+            const { data: giftData } = await _supabase
+                .from("gifts")
+                .select("amount");
+
+            const totalGiftCoins = (giftData || []).reduce((s, g) => s + (g.amount || 0), 0);
+
+            document.getElementById("stat-msgs").textContent = msgCount || 0;
+            document.getElementById("stat-gifts").textContent = totalGiftCoins;
+        }
+
+        async function loadUsers() {
+            const { data, error } = await _supabase
+                .from("messages")
+                .select("user_id, user_name, created_at, message")
+                .order("created_at", { ascending: false });
+
+            if (error) {
+                document.getElementById("user-list").innerHTML = `<div class="empty">এরর: ${error.message}</div>`;
+                return;
+            }
+
+            // Group by user_id
+            const map = {};
+            (data || []).forEach(m => {
+                if (!map[m.user_id]) {
+                    map[m.user_id] = {
+                        user_id: m.user_id,
+                        user_name: m.user_name || "Unknown",
+                        last_msg: m.message,
+                        last_at: m.created_at,
+                        count: 0
+                    };
+                }
+                map[m.user_id].count++;
+            });
+
+            const users = Object.values(map).sort((a, b) => new Date(b.last_at) - new Date(a.last_at));
+            document.getElementById("stat-users").textContent = users.length;
+
+            if (users.length === 0) {
+                document.getElementById("user-list").innerHTML = `<div class="empty">এখনো কোনো ইউজার মেসেজ পাঠায়নি</div>`;
+                return;
+            }
+
+            document.getElementById("user-list").innerHTML = users.map(u => `
+                <div class="user-item" onclick="openChat(${u.user_id}, '${escapeHtml(u.user_name)}')">
+                    <div>
+                        <div class="name">${escapeHtml(u.user_name)}</div>
+                        <div class="meta">ID: ${u.user_id} • ${timeAgo(u.last_at)}</div>
+                    </div>
+                    <div class="badge">${u.count}</div>
+                </div>
+            `).join("");
+        }
+
+        async function loadGifts() {
+            const { data } = await _supabase
+                .from("gifts")
+                .select("*")
+                .order("created_at", { ascending: false })
+                .limit(20);
+
+            if (!data || data.length === 0) {
+                document.getElementById("gifts-list").innerHTML = `<div class="empty">কোনো গিফট নেই</div>`;
+                return;
+            }
+
+            document.getElementById("gifts-list").innerHTML = data.map(g => `
+                <div class="gift-item">
+                    <div>
+                        <strong>${escapeHtml(g.user_name || "Unknown")}</strong>
+                        <div style="font-size:11px;color:var(--text2);margin-top:2px;">${timeAgo(g.created_at)}</div>
+                    </div>
+                    <div class="amount">+${g.amount} কয়েন</div>
+                </div>
+            `).join("");
+        }
+
+        // ========== CHAT ==========
+        async function openChat(userId, userName) {
+            currentChatUserId = userId;
+            currentChatUserName = userName;
+            document.getElementById("chat-title").textContent = userName + " (" + userId + ")";
+            document.getElementById("chat-panel").classList.add("open");
+            document.getElementById("reply-input").value = "";
+
+            const { data } = await _supabase
+                .from("messages")
+                .select("*")
+                .eq("user_id", userId)
+                .order("created_at", { ascending: true });
+
+            const box = document.getElementById("chat-messages");
+            if (!data || data.length === 0) {
+                box.innerHTML = `<div class="empty">কোনো মেসেজ নেই</div>`;
+                return;
+            }
+
+            box.innerHTML = data.map(m => `
+                <div class="msg ${m.sender_type === 'admin' ? 'admin' : 'user'}">
+                    ${escapeHtml(m.message)}
+                    <div class="time">${formatTime(m.created_at)}</div>
+                </div>
+            `).join("");
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function closeChat() {
+            document.getElementById("chat-panel").classList.remove("open");
+            currentChatUserId = null;
+        }
+
+        async function sendAdminReply() {
+            const text = document.getElementById("reply-input").value.trim();
+            if (!text || !currentChatUserId) return;
+
+            document.getElementById("reply-input").value = "";
+
+            const { error } = await _supabase
+                .from("messages")
+                .insert([{
+                    user_id: currentChatUserId,
+                    user_name: currentChatUserName,
+                    message: text,
+                    sender_type: "admin"
+                }]);
+
+            if (error) {
+                alert("রিপ্লাই পাঠাতে সমস্যা: " + error.message);
+                return;
+            }
+
+            // Refresh chat view
+            openChat(currentChatUserId, currentChatUserName);
+        }
+
+        document.getElementById("reply-input")?.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") sendAdminReply();
+        });
+
+        // Realtime for admin (optional refresh)
+        _supabase
+            .channel("admin-messages")
+            .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => {
+                loadUsers();
+                if (currentChatUserId) openChat(currentChatUserId, currentChatUserName);
+            })
+            .subscribe();
+
+        // ========== HELPERS ==========
+        function escapeHtml(str) {
+            if (!str) return "";
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        function formatTime(iso) {
+            if (!iso) return "";
+            const d = new Date(iso);
+            return d.toLocaleString("bn-BD", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" });
+        }
+
+        function timeAgo(iso) {
+            if (!iso) return "";
+            const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+            if (diff < 60) return "এইমাত্র";
+            if (diff < 3600) return Math.floor(diff / 60) + " মিনিট আগে";
+            if (diff < 86400) return Math.floor(diff / 3600) + " ঘণ্টা আগে";
+            return Math.floor(diff / 86400) + " দিন আগে";
+        }
+    </script>
+</body>
+</html>
